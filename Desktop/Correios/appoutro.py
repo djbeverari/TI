@@ -2,6 +2,7 @@ import pandas as pd
 from flask import Flask, request, render_template
 import os
 import xlwt
+import re
 
 app = Flask(__name__)
 
@@ -9,45 +10,80 @@ app = Flask(__name__)
 def read_txt_to_dataframe(txt_file):
     records = []
     with open(txt_file, 'r', encoding='latin1') as file:
-        for line in file:
-            line = line.strip().split()
-            if len(line) < 10:
-                print(f"Ignorando linha incompleta ou mal formatada: {line}")
-                continue  # Ignorar linhas incompletas ou mal formatadas
-            cpf = line[0]
-            email_index = None
-            for i, word in enumerate(line):
-                if '@' in word:
-                    email_index = i
-                    break
-            if email_index is None or email_index < 1 or email_index + 9 >= len(line):
-                print(f"Ignorando linha sem e-mail válido: {line}")
-                continue  # Ignorar linhas sem e-mail válido ou com e-mail na primeira posição
-            nome = ' '.join(line[1:email_index])[:30]  # Limite de 30 caracteres para o nome
-            email = line[email_index]
-            cep = line[email_index + 1]
-            logradouro = ' '.join(line[email_index + 2:email_index + 4])
-            numero = line[email_index + 4]
-            complemento = ' '.join(line[email_index + 5:email_index + 7])
-            bairro = line[email_index + 7]
-            cidade = line[email_index + 8]
-            estado = line[email_index + 9]
-            
+        next(file)  # Ignorando a primeira linha que é apenas cabeçalho
+        for line1, line2 in zip(file, file):  # Lendo duas linhas de cada vez
+            cpf_match = re.search(r'^(\d{11})', line1)
+            if cpf_match:
+                cpf = cpf_match.group(1).strip()
+            else:
+                cpf = ''
+                
+            nome_match = re.search(r'^\d{11}(.{49})', line1)
+            if nome_match:
+                nome = nome_match.group(1).strip()
+                nome = re.sub(r'\d', '', nome)  # Removendo dígitos do CPF do campo do nome
+            else:
+                nome = ''
+                
+            email_match = re.search(r'(.{66})(.{50})', line1)
+            if email_match:
+                email = email_match.group(2).strip()
+            else:
+                email = ''
+                
+            cep_endereco_match = re.search(r'(.{150})(.{110})', line1)
+            if cep_endereco_match:
+                cep_endereco = cep_endereco_match.group(2).strip()
+                cep = cep_endereco[:8].strip()
+                logradouro = cep_endereco[8:].strip()
+            else:
+                cep = ''
+                logradouro = ''
+                
+            numero_complemento_match = re.search(r'(.{260})(.{30})', line2)
+            if numero_complemento_match:
+                numero_complemento = numero_complemento_match.group(1).strip()
+                numero = numero_complemento[:7].strip()
+                complemento = numero_complemento[7:].strip()
+            else:
+                numero = ''
+                complemento = ''
+                
+            bairro_match = re.search(r'(.{290})(.{30})', line2)
+            if bairro_match:
+                bairro = bairro_match.group(2).strip()
+            else:
+                bairro = ''
+                
+            cidade_match = re.search(r'(.{320})(.{30})', line2)
+            if cidade_match:
+                cidade = cidade_match.group(2).strip()
+            else:
+                cidade = ''
+                
+            uf_match = re.search(r'(.{350})(.{2})$', line2)
+            if uf_match:
+                uf = uf_match.group(2).strip()
+            else:
+                uf = ''
+
             record = {
-                'CPF': cpf,
                 'Nome': nome,
                 'Email': email,
+                'CPF/CNPJ': cpf,
                 'CEP': cep,
                 'Logradouro': logradouro,
                 'Número': numero,
                 'Complemento': complemento,
                 'Bairro': bairro,
                 'Cidade': cidade,
-                'Estado': estado
+                'UF': uf
             }
             records.append(record)
 
     df = pd.DataFrame(records)
+    if df.empty:
+        print("O DataFrame está vazio. Verifique o conteúdo do arquivo TXT.")
     return df
 
 # Função para salvar o DataFrame em um arquivo XLS
@@ -57,22 +93,22 @@ def save_to_excel(dataframe, xls_file):
     sheet = workbook.add_sheet('Sheet1')
 
     # Escrever cabeçalho
-    headers = ['CPF', 'Nome', 'Email', 'CEP', 'Logradouro', 'Número', 'Complemento', 'Bairro', 'Cidade', 'Estado']
+    headers = ['Nome', 'Email', 'CPF/CNPJ', 'CEP', 'Logradouro', 'Número', 'Complemento', 'Bairro', 'Cidade', 'UF']
     for col, header in enumerate(headers):
         sheet.write(0, col, header)
 
     # Escrever dados
     for row, (_, data) in enumerate(dataframe.iterrows(), start=1):
-        sheet.write(row, 0, str(data['CPF']))
-        sheet.write(row, 1, data['Nome'])
-        sheet.write(row, 2, data['Email'])
-        sheet.write(row, 3, str(data['CEP']))
+        sheet.write(row, 0, data['Nome'])
+        sheet.write(row, 1, data['Email'])
+        sheet.write(row, 2, data['CPF/CNPJ'])
+        sheet.write(row, 3, data['CEP'])
         sheet.write(row, 4, data['Logradouro'])
-        sheet.write(row, 5, str(data['Número']))
+        sheet.write(row, 5, data['Número'])
         sheet.write(row, 6, data['Complemento'])
         sheet.write(row, 7, data['Bairro'])
         sheet.write(row, 8, data['Cidade'])
-        sheet.write(row, 9, data['Estado'])
+        sheet.write(row, 9, data['UF'])
 
     workbook.save(xls_file)
     print("Arquivo salvo com sucesso como", xls_file)
@@ -116,7 +152,7 @@ def upload():
         print(f"Erro ao salvar o arquivo XLS: {e}")
         return f"Erro ao salvar o arquivo XLS: {e}"
     
-    return f"Arquivo {txt_filename} enviado e convertido para XLS com sucesso!"
+    return "Arquivo processado com sucesso."
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(debug=True, port=5001)
