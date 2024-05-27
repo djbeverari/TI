@@ -1,158 +1,91 @@
-import pandas as pd
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, send_file
 import os
+import xlrd
 import xlwt
-import re
 
 app = Flask(__name__)
 
-# Função para processar o arquivo TXT e converter em DataFrame
-def read_txt_to_dataframe(txt_file):
-    records = []
-    with open(txt_file, 'r', encoding='latin1') as file:
-        next(file)  # Ignorando a primeira linha que é apenas cabeçalho
-        for line1, line2 in zip(file, file):  # Lendo duas linhas de cada vez
-            cpf_match = re.search(r'^(\d{11})', line1)
-            if cpf_match:
-                cpf = cpf_match.group(1).strip()
-            else:
-                cpf = ''
-                
-            nome_match = re.search(r'^\d{11}(.{49})', line1)
-            if nome_match:
-                nome = nome_match.group(1).strip()
-                nome = re.sub(r'\d', '', nome)  # Removendo dígitos do CPF do campo do nome
-            else:
-                nome = ''
-                
-            email_match = re.search(r'(.{66})(.{50})', line1)
-            if email_match:
-                email = email_match.group(2).strip()
-            else:
-                email = ''
-                
-            cep_endereco_match = re.search(r'(.{150})(.{110})', line1)
-            if cep_endereco_match:
-                cep_endereco = cep_endereco_match.group(2).strip()
-                cep = cep_endereco[:8].strip()
-                logradouro = cep_endereco[8:].strip()
-            else:
-                cep = ''
-                logradouro = ''
-                
-            numero_complemento_match = re.search(r'(.{260})(.{30})', line2)
-            if numero_complemento_match:
-                numero_complemento = numero_complemento_match.group(1).strip()
-                numero = numero_complemento[:7].strip()
-                complemento = numero_complemento[7:].strip()
-            else:
-                numero = ''
-                complemento = ''
-                
-            bairro_match = re.search(r'(.{290})(.{30})', line2)
-            if bairro_match:
-                bairro = bairro_match.group(2).strip()
-            else:
-                bairro = ''
-                
-            cidade_match = re.search(r'(.{320})(.{30})', line2)
-            if cidade_match:
-                cidade = cidade_match.group(2).strip()
-            else:
-                cidade = ''
-                
-            uf_match = re.search(r'(.{350})(.{2})$', line2)
-            if uf_match:
-                uf = uf_match.group(2).strip()
-            else:
-                uf = ''
+# Diretório para salvar os arquivos enviados
+UPLOAD_FOLDER = 'uploads'
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
 
-            record = {
-                'Nome': nome,
-                'Email': email,
-                'CPF/CNPJ': cpf,
-                'CEP': cep,
-                'Logradouro': logradouro,
-                'Número': numero,
-                'Complemento': complemento,
-                'Bairro': bairro,
-                'Cidade': cidade,
-                'UF': uf
-            }
-            records.append(record)
+# Diretório para salvar o arquivo XLS de saída
+OUTPUT_FOLDER = 'output'
+if not os.path.exists(OUTPUT_FOLDER):
+    os.makedirs(OUTPUT_FOLDER)
 
-    df = pd.DataFrame(records)
-    if df.empty:
-        print("O DataFrame está vazio. Verifique o conteúdo do arquivo TXT.")
-    return df
-
-# Função para salvar o DataFrame em um arquivo XLS
-def save_to_excel(dataframe, xls_file):
-    xls_file = xls_file + '.xls'
-    workbook = xlwt.Workbook()
-    sheet = workbook.add_sheet('Sheet1')
-
-    # Escrever cabeçalho
-    headers = ['Nome', 'Email', 'CPF/CNPJ', 'CEP', 'Logradouro', 'Número', 'Complemento', 'Bairro', 'Cidade', 'UF']
-    for col, header in enumerate(headers):
-        sheet.write(0, col, header)
-
-    # Escrever dados
-    for row, (_, data) in enumerate(dataframe.iterrows(), start=1):
-        sheet.write(row, 0, data['Nome'])
-        sheet.write(row, 1, data['Email'])
-        sheet.write(row, 2, data['CPF/CNPJ'])
-        sheet.write(row, 3, data['CEP'])
-        sheet.write(row, 4, data['Logradouro'])
-        sheet.write(row, 5, data['Número'])
-        sheet.write(row, 6, data['Complemento'])
-        sheet.write(row, 7, data['Bairro'])
-        sheet.write(row, 8, data['Cidade'])
-        sheet.write(row, 9, data['UF'])
-
-    workbook.save(xls_file)
-    print("Arquivo salvo com sucesso como", xls_file)
-
-# Rota para a página inicial
 @app.route('/')
 def index():
     return render_template('index.html')
 
-# Rota para lidar com o upload do arquivo TXT
 @app.route('/upload', methods=['POST'])
-def upload():
-    if 'file' not in request.files:
-        return 'Nenhum arquivo enviado'
+def upload_file():
+    # Obtém o arquivo enviado pelo usuário
     file = request.files['file']
-    if file.filename == '':
-        return 'Nome de arquivo inválido'
-    if not os.path.exists('uploads'):
-        os.makedirs('uploads')
-    txt_filename = file.filename
-    txt_file_path = os.path.join('uploads', txt_filename)
-    file.save(txt_file_path)
-    print(f"Arquivo {txt_filename} salvo em {txt_file_path}")
     
-    # Processar o arquivo TXT e criar o DataFrame
+    # Salva o arquivo no diretório de uploads
+    file_path = os.path.join(UPLOAD_FOLDER, file.filename)
+    file.save(file_path)
+    
+    # Lê o conteúdo do arquivo TXT
+    with open(file_path, 'r') as f:
+        content = f.readlines()
+    
+    # Cria uma lista de dicionários com os dados
+    data = []
+    for line in content:
+        fields = line.split()
+        if len(fields) >= 10:
+            data.append({
+                'Código': fields[0].strip(),
+                'Nome Completo': ' '.join(fields[1:-9]).strip(),
+                'Email': fields[-9].strip(),
+                'CEP': fields[-8].strip(),
+                'Endereço': ' '.join(fields[-7:-4]).strip(),
+                'Número': fields[-4].strip(),
+                'Complemento': fields[-3].strip(),
+                'Bairro': fields[-2].strip(),
+                'Cidade': fields[-1].strip(),
+                'Telefone': fields[-5].strip()
+            })
+    
+    # Abre o arquivo Excel de template no formato .xls
+    template_file = 'dados.xls'
+    template_workbook = xlrd.open_workbook(template_file)
+    template_sheet = template_workbook.sheet_by_index(0)
+    
+    # Cria um novo arquivo Excel de saída no formato .xls
+    output_file = os.path.join(os.getcwd(), OUTPUT_FOLDER, 'dados_salvos.xls')
+    output_workbook = xlwt.Workbook()
+    output_sheet = output_workbook.add_sheet('Sheet1')
+    
     try:
-        df = read_txt_to_dataframe(txt_file_path)
-        if df.empty:
-            return "O DataFrame está vazio. Verifique o conteúdo do arquivo TXT."
-        print(df.head())
-    except Exception as e:
-        print(f"Erro ao processar o arquivo TXT: {e}")
-        return f"Erro ao processar o arquivo TXT: {e}"
-    
-    # Salvar o DataFrame no arquivo XLS
-    try:
-        xls_file = os.path.join('uploads', 'dados_salvos')
-        save_to_excel(df, xls_file)
-        print(f"Arquivo XLS salvo em {xls_file}")
-    except Exception as e:
-        print(f"Erro ao salvar o arquivo XLS: {e}")
-        return f"Erro ao salvar o arquivo XLS: {e}"
-    
-    return "Arquivo processado com sucesso."
+        # Copia os dados do template para o arquivo de saída
+        for row in range(template_sheet.nrows):
+            for col in range(template_sheet.ncols):
+                output_sheet.write(row, col, template_sheet.cell_value(row, col))
+        
+        # Adiciona os dados ao arquivo de saída
+        for row, data_row in enumerate(data):
+            output_sheet.write(row + template_sheet.nrows, 0, data_row['Código'])
+            output_sheet.write(row + template_sheet.nrows, 1, data_row['Nome Completo'])
+            output_sheet.write(row + template_sheet.nrows, 2, data_row['Email'])
+            output_sheet.write(row + template_sheet.nrows, 3, data_row['CEP'])
+            output_sheet.write(row + template_sheet.nrows, 4, data_row['Endereço'])
+            output_sheet.write(row + template_sheet.nrows, 5, data_row['Número'])
+            output_sheet.write(row + template_sheet.nrows, 6, data_row['Complemento'])
+            output_sheet.write(row + template_sheet.nrows, 7, data_row['Bairro'])
+            output_sheet.write(row + template_sheet.nrows, 8, data_row['Cidade'])
+            output_sheet.write(row + template_sheet.nrows, 9, data_row['Telefone'])
+        
+        # Salva o arquivo Excel de saída
+        output_workbook.save(output_file)
+        
+        # Retorna o arquivo XLS para download
+        return send_file(output_file, as_attachment=True)
+    except FileNotFoundError:
+        return "Erro: O arquivo de template 'dados.xls' não foi encontrado."
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     app.run(debug=True, port=5001)
