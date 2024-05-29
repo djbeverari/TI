@@ -31,15 +31,18 @@ def upload_file():
     with open(file_path, 'r') as f:
         content = f.readlines()
 
-    # Adiciona as linhas de debug aqui
-    for line in content:
-        print(f"Linha completa: {line}")
-        print(f"Complemento extraído: '{line[280:309]}'")    
+    # Ignorar a primeira linha (cabeçalho)
+    content = content[1:]         
     
     # Cria uma lista de dicionários com os dados
     data = []
     for line in content:
+        # Obtenha o CPF da linha
         cpf = line[:12].strip()
+        
+        # Remova apenas o primeiro "2" do CPF, se presente
+        cpf = cpf.replace("2", "", 1)
+        
         nome = line[12:50].strip()
         email = line[50:95].strip()
         telefone = line[427:438].strip()
@@ -63,7 +66,6 @@ def upload_file():
             'Cidade': cidade,
             'Telefone': telefone,
             'Celular' : celular
-
         }
         data.append(data_row)
     
@@ -79,7 +81,7 @@ def upload_file():
             output_sheet.write(0, col, header)
         
         # Adiciona os dados ao arquivo de saída
-        for row, data_row in enumerate(data, start=1):
+        for row, data_row in enumerate(data[:-1], start=1):
             output_sheet.write(row, 0, data_row['Nome'])
             output_sheet.write(row, 1, data_row['Email'])
             output_sheet.write(row, 2, data_row['CPF'])
