@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arquivei</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <header class="header">
+    <img src="{{ url_for('static', filename='logo.jpg') }}" alt="Logo" class="logo">
+    <div class="header-text">
+      <p>Por favor, clique em "Escolher arquivos" antes de selecionar os arquivos que deseja baixar (você pode usar Ctrl + A para selecionar todos de uma vez) e, em seguida, clique em "Upload". Os arquivos reorganizados serão salvos na pasta "Uploads".</p>
+    </div>
+  </header>
+  <main class="content">
+    <form method="post" action="/upload" enctype="multipart/form-data">
+      <h1>Upload de Arquivos</h1>
+      <input type="file" name="files[]" multiple class="custom-file-input" aria-label="Selecione os arquivos para upload">
+      <input type="submit" value="Upload" aria-label="Enviar arquivos">
+    </form>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <ul class="messages">
+        {% for message in messages %}
+          <li class="message">{{ message }}</li>
+        {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+  </main>
+</body>
+</html>
