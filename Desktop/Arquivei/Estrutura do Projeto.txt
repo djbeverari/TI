@@ -1,0 +1,7 @@
+project/
+├── app.py
+├── uploads/
+│   ├── index.html
+│   └── [Arquivos de Upload]
+└── templates/
+    └── index.html

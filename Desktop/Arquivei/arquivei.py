@@ -13,6 +13,12 @@ def extrair_cnpj(nome_arquivo):
     cnpj = nome_arquivo[6:20]
     return cnpj
 
+def extrair_mes(nome_arquivo):
+    if len(nome_arquivo) < 6:
+        return None
+    mes = nome_arquivo[4:6]
+    return mes
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -32,14 +38,15 @@ def upload_file():
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(file_path)
             cnpj = extrair_cnpj(filename)
-            if cnpj:
-                destino = os.path.join(app.config['UPLOAD_FOLDER'], cnpj)
+            mes = extrair_mes(filename)
+            if cnpj and mes:
+                destino = os.path.join(app.config['UPLOAD_FOLDER'], cnpj, mes)
                 if not os.path.exists(destino):
                     os.makedirs(destino)
                 shutil.move(file_path, os.path.join(destino, filename))
                 flash(f"Arquivo '{filename}' movido para a pasta '{destino}'")
             else:
-                flash(f"Não foi possível extrair o CNPJ do arquivo '{filename}'")
+                flash(f"Não foi possível extrair o CNPJ ou o mês do arquivo '{filename}'")
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
