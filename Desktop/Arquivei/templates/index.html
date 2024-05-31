@@ -19,15 +19,9 @@
       <input type="file" name="files[]" multiple class="custom-file-input" aria-label="Selecione os arquivos para upload">
       <input type="submit" value="Upload" aria-label="Enviar arquivos">
     </form>
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}
-        <ul class="messages">
-        {% for message in messages %}
-          <li class="message">{{ message }}</li>
-        {% endfor %}
-        </ul>
-      {% endif %}
-    {% endwith %}
+    {% if message %}
+      <div class="message">{{ message }}</div>
+    {% endif %}
   </main>
 </body>
 </html>

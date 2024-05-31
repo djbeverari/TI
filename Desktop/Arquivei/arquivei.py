@@ -1,6 +1,8 @@
-from flask import Flask, request, redirect, url_for, render_template, flash
+
+from flask import Flask, request, redirect, url_for, render_template, flash, session
 import os
 import shutil
+import time
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
@@ -21,7 +23,8 @@ def extrair_mes(nome_arquivo):
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    message = session.pop('message', None)
+    return render_template('index.html', message=message)
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -29,6 +32,7 @@ def upload_file():
         flash('No file part')
         return redirect(request.url)
     files = request.files.getlist('files[]')
+    total_moved_files = 0
     for file in files:
         if file.filename == '':
             flash('No selected file')
@@ -44,9 +48,13 @@ def upload_file():
                 if not os.path.exists(destino):
                     os.makedirs(destino)
                 shutil.move(file_path, os.path.join(destino, filename))
-                flash(f"Arquivo '{filename}' movido para a pasta '{destino}'")
+                total_moved_files += 1
             else:
                 flash(f"Não foi possível extrair o CNPJ ou o mês do arquivo '{filename}'")
+    # Define a mensagem com o total de arquivos movidos
+    session['message'] = f"{total_moved_files} arquivo(s) movido(s) para a pasta 'Uploads'"
+    # Adiciona um pequeno atraso antes de redirecionar para garantir que a mensagem seja exibida
+    time.sleep(0.5)
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
