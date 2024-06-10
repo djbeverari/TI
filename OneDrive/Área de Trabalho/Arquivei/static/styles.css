@@ -1,0 +1,88 @@
+body {
+  font-family: Arial, sans-serif;
+  background-color: #FFFFFF; /* Cor de fundo branca */
+  color: #033092; /* Cor da fonte */
+  margin: 0;
+  padding: 0;
+}
+
+.header {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  padding: 10px 20px;
+  background-color: #f7f7f7; /* Fundo do cabeçalho */
+  border-bottom: 1px solid #ddd; /* Linha inferior do cabeçalho */
+}
+
+.logo {
+  max-width: 200px; /* Ajuste o tamanho conforme necessário */
+  height: auto;
+  margin-right: 20px; /* Espaçamento entre o logo e o texto */
+}
+
+.header-text {
+  max-width: 600px; /* Limite de largura para o texto */
+}
+
+.content {
+  padding: 20px; /* Padding geral */
+  text-align: left; /* Alinhar texto à esquerda */
+}
+
+h1 {
+  color: #0033A0;
+  margin: 20px 0; /* Adiciona um espaçamento superior e inferior */
+}
+
+form {
+  margin: 20px auto; /* Centraliza o formulário horizontalmente */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.custom-file-input {
+  display: block;
+  margin-bottom: 10px; /* Adiciona margem na parte inferior */
+}
+
+input[type="submit"] {
+  background-color: #CE2B37;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+}
+
+input[type="submit"]:hover {
+  background-color: #FFD700;
+}
+
+ul.messages {
+  list-style-type: none;
+  padding: 0;
+}
+
+li.message {
+  color: red;
+}
+
+@media (max-width: 600px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .logo {
+    margin-bottom: 10px;
+  }
+
+  .header-text {
+    max-width: 100%;
+  }
+
+  .content {
+    padding: 10px;
+  }
+}
