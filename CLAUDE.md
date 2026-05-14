@@ -40,6 +40,34 @@
 - **data:analyze** — Analyze IT metrics (uptime, performance, etc.)
 - **enterprise-search:search** — Search tickets, docs, and systems
 
+## Development & Programming Skills
+**Automatically use these for dev/coding tasks:**
+
+### Backend Development
+- **dev:python-backend** — Python backend development, data processing
+- **dev:write-code** — Write and implement code
+- **dev:debug** — Debug and fix errors in code
+- **dev:refactor** — Improve and refactor existing code
+
+### Frontend Development
+- **dev:frontend** — HTML/CSS/JavaScript frontend development
+- **dev:ui-component** — Build UI components
+- **dev:css-styling** — CSS styling and layout
+
+### Testing & Quality
+- **dev:write-tests** — Write unit tests and integration tests
+- **dev:test-driven-development** — TDD approach for coding
+- **dev:code-review** — Review code for quality and best practices
+
+### Data & Database
+- **dev:sql** — SQL queries and database design
+- **dev:data-processing** — Data transformation and processing
+
+### DevOps & Automation
+- **dev:automation** — Write automation scripts (Python, PowerShell)
+- **dev:ci-cd** — CI/CD pipeline configuration
+- **dev:scripting** — Shell scripting and automation
+
 ## IT Strategic Skills
 **For long-term planning and decisions:**
 
