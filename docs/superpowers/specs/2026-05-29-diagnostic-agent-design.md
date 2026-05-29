@@ -2,43 +2,55 @@
 
 **Data:** 2026-05-29  
 **Autor:** Daniella  
-**Status:** Aprovado
+**Status:** Aprovado (v2 — polling model, sem WinRM)
 
 ---
 
 ## Visão Geral
 
-Ferramenta para o técnico de TI diagnosticar remotamente máquinas Windows nas lojas (até 39 máquinas). O técnico aciona o diagnóstico pelo painel web, o agente coleta dados na máquina alvo e exibe os resultados em um dashboard centralizado com foco nos problemas encontrados.
+Ferramenta para o técnico de TI diagnosticar remotamente máquinas Windows nas lojas (até 39 máquinas). O técnico aciona o diagnóstico pelo painel web; o agente instalado em cada máquina busca comandos pendentes no servidor, executa os checks e envia os resultados. O dashboard exibe o estado centralizado com foco nos problemas encontrados.
 
 ---
 
 ## Arquitetura
 
 ```
-┌─────────────────────────────────────────────────┐
-│              MÁQUINA CENTRAL (TI)               │
-│                                                 │
-│  ┌──────────────┐    ┌─────────────────────┐   │
-│  │ Web Dashboard│◄───│  FastAPI Server     │   │
-│  │ (HTML/JS)    │    │  + SQLite           │   │
-│  └──────────────┘    └──────────┬──────────┘   │
-└─────────────────────────────────│───────────────┘
-                                  │ WinRM
+┌──────────────────────────────────────────────────┐
+│              MÁQUINA CENTRAL (TI)                │
+│                                                  │
+│  ┌──────────────┐    ┌──────────────────────┐   │
+│  │ Web Dashboard│◄───│  FastAPI Server      │   │
+│  │ (HTML/JS)    │    │  + SQLite            │   │
+│  └──────────────┘    └──────────┬───────────┘   │
+└─────────────────────────────────│────────────────┘
+                                  │ HTTP (porta 8000)
           ┌───────────────────────┼───────────────┐
           ▼                       ▼               ▼
    ┌─────────────┐       ┌─────────────┐  ┌─────────────┐
    │  LOJA 01    │       │  LOJA 02    │  │  LOJA N     │
    │  agent.py   │       │  agent.py   │  │  agent.py   │
-   └──────┬──────┘       └──────┬──────┘  └──────┬──────┘
-          └───────────HTTP POST─┴─────────────────┘
-                      (JSON → Servidor Central)
+   │  (polling)  │       │  (polling)  │  │  (polling)  │
+   └─────────────┘       └─────────────┘  └─────────────┘
 ```
+
+**Modelo de comunicação — Agent Pull (sem WinRM):**
+
+1. Cada agente roda como Tarefa Agendada no Windows (a cada 10 segundos)
+2. Agente chama `GET /pending/{hostname}` — se não há diagnóstico pendente, encerra
+3. Técnico clica "Diagnosticar" no painel → servidor registra comando pendente
+4. Na próxima rodada (≤ 10 seg), agente detecta o pedido, executa os checks e envia o resultado via `POST /report`
+5. Dashboard atualiza automaticamente (polling a cada 5 segundos)
+
+**Vantagens sobre WinRM:**
+- Não requer privilégios de administrador nas máquinas
+- Não requer configuração de firewall de entrada
+- Funciona em qualquer ambiente Windows sem pré-requisitos especiais
 
 ### Componentes
 
 | Componente | Tecnologia | Onde roda |
 |---|---|---|
-| Agente de coleta | Python script (ou `.exe` via PyInstaller) | Cada máquina das lojas |
+| Agente de coleta | Python 3 (Task Scheduler) | Cada máquina das lojas |
 | Servidor central | Python FastAPI + SQLite | Máquina do TI |
 | Painel web | HTML + CSS + JS vanilla | Navegador do técnico |
 | Cadastro de máquinas | `machines.json` (editado manualmente) | Pasta do servidor |
@@ -56,21 +68,28 @@ Arquivo `machines.json` na raiz do servidor. Editado manualmente quando necessá
 ]
 ```
 
-O servidor lê esse arquivo na inicialização. Para adicionar ou remover máquinas, basta editar o JSON e reiniciar o servidor.
-
 ### Configuração do Servidor (`config.json`)
 
 ```json
 {
   "server_port": 8000,
-  "winrm_user": "administrador",
-  "winrm_password": "senha_aqui",
-  "linx_service_names": ["Dtef", "DtefService"],
-  "agent_path_on_machine": "C:\\TI\\agent.py"
+  "linx_process_names": ["linx.exe", "linxpos.exe"],
+  "linx_service_keywords": ["linx", "dtef"],
+  "linx_port": null
 }
 ```
 
-O `agent.py` nas máquinas das lojas recebe a URL do servidor como argumento na hora do disparo via WinRM: `python C:\TI\agent.py --server http://192.168.0.1:8000`.
+- `linx_service_keywords`: agente filtra todos os serviços instalados cujo nome contém essas palavras. Na primeira execução, o relatório inclui a lista completa de serviços Linx/Dtef encontrados para identificação.
+- `linx_port`: se `null`, o check de porta é pulado com status `OK` e mensagem "porta não configurada".
+
+### Configuração do Agente (`agent_config.json`) — fica em `C:\TI\`
+
+```json
+{
+  "server_url": "http://192.168.0.1:8000",
+  "poll_interval_sec": 10
+}
+```
 
 ---
 
@@ -95,7 +114,7 @@ O agente coleta dados em 5 categorias. Cada check retorna: `OK`, `AVISO` ou `CR�
 | Uso de CPU | WMI `Win32_Processor` | > 85% → AVISO |
 | Uso de RAM | WMI `Win32_PhysicalMemory` | > 90% → AVISO |
 | Saúde do disco (SMART) | `Get-PhysicalDisk` | Status ≠ "Healthy" → CRÍTICO |
-| Temperatura CPU | WMI `MSAcpi_ThermalZoneTemperature` | > 85°C → AVISO; não disponível → exibe "N/D" |
+| Temperatura CPU | WMI `MSAcpi_ThermalZoneTemperature` | > 85°C → AVISO; não disponível → exibe "N/D", status OK |
 
 ### Rede
 
@@ -118,11 +137,11 @@ O agente coleta dados em 5 categorias. Cada check retorna: `OK`, `AVISO` ou `CR�
 
 | Check | Método | Limiar de Alerta |
 |---|---|---|
-| Processo Linx POS | `Get-Process` (tenta `linx.exe` e `linxpos.exe`) | Nenhum encontrado → CRÍTICO |
-| Serviço Dtef | `Get-Service` (nomes configuráveis em `config.json`) | Parado ou não encontrado → CRÍTICO |
-| Porta local Linx (8080) | `Test-NetConnection` | Fechada → AVISO |
+| Processo Linx POS | `Get-Process` (nomes em `config.json`) | Nenhum encontrado → CRÍTICO |
+| Serviços Linx/Dtef | `Get-Service` filtrado por keywords | Qualquer parado → CRÍTICO; lista completa retornada no relatório |
+| Porta Linx | `Test-NetConnection` (se configurada) | Fechada → AVISO; não configurada → OK / "não configurada" |
 
-> **Nota:** Para temperatura, se WMI não suportar o hardware, retorna `"value": "N/D"` com status `OK`.
+> **Descoberta de serviços:** na primeira execução, o agente lista todos os serviços cujo nome contém "linx" ou "dtef" e inclui no relatório como `"linx_services_found"`. Isso permite identificar o nome exato do Dtef sem precisar acessar a máquina manualmente.
 
 ---
 
@@ -136,6 +155,14 @@ CREATE TABLE machines (
     ip        TEXT,
     loja_nome TEXT,
     last_seen TEXT
+);
+
+-- Comandos pendentes (criados pelo painel, consumidos pelo agente)
+CREATE TABLE pending_commands (
+    id         INTEGER PRIMARY KEY,
+    hostname   TEXT,
+    created_at TEXT,
+    status     TEXT  -- 'pending' | 'running' | 'done'
 );
 
 -- Sessões de diagnóstico
@@ -166,8 +193,9 @@ CREATE TABLE checks (
 | Método | Rota | Descrição |
 |---|---|---|
 | `GET` | `/` | Serve o painel HTML |
-| `GET` | `/machines` | Lista máquinas do `machines.json` com último status |
-| `POST` | `/diagnose/{hostname}` | Dispara diagnóstico via WinRM na máquina |
+| `GET` | `/machines` | Lista máquinas com último status |
+| `POST` | `/diagnose/{hostname}` | Registra diagnóstico pendente para a máquina |
+| `GET` | `/pending/{hostname}` | Agente verifica se há diagnóstico pendente |
 | `POST` | `/report` | Agente envia resultado JSON |
 | `GET` | `/diagnostics/{hostname}/latest` | Último diagnóstico de uma máquina |
 | `GET` | `/diagnostics/{hostname}` | Histórico de diagnósticos |
@@ -181,6 +209,7 @@ CREATE TABLE checks (
   "loja": "Loja 02",
   "timestamp": "2026-05-29T10:42:00",
   "duration_sec": 14,
+  "linx_services_found": ["LinxPOS", "DtefSvc"],
   "checks": [
     {
       "category": "linx",
@@ -212,6 +241,7 @@ CREATE TABLE checks (
 - Barra de filtros: Todos / Críticos / Avisos / por categoria
 - Contador global no cabeçalho (X OK, Y Avisos, Z Críticos)
 - Botão "Diagnosticar Todas"
+- Indicador de agente: "online" se fez polling nos últimos 30 seg, "offline" caso contrário
 
 ### Tela de Detalhe — Problemas Primeiro
 
@@ -221,26 +251,33 @@ Aberta ao clicar em um card (modal overlay):
 2. **Avisos** — itens em amarelo
 3. **Sem problemas** — resumo compacto verde listando todos os checks OK
 4. Botão "Diagnosticar" para acionar novo diagnóstico nessa máquina
+5. Seção "Serviços Linx encontrados" exibida na primeira execução para auxiliar configuração
 
 ---
 
-## Fluxo de Execução Remota
+## Fluxo de Execução
 
 1. Técnico clica em "Diagnosticar" no painel
-2. Servidor FastAPI recebe `POST /diagnose/{hostname}`
-3. Servidor dispara `Invoke-Command` via WinRM para a máquina alvo
-4. Agente `agent.py` (ou `agent.exe`) executa os checks (≈ 10–20 seg)
-5. Agente faz `HTTP POST /report` com o JSON dos resultados
-6. Servidor salva no SQLite e atualiza o estado em memória
-7. Painel atualiza automaticamente (polling a cada 5 segundos)
+2. Servidor registra `pending_command` para o hostname no SQLite
+3. Painel exibe "aguardando agente..." no card
+4. Agente na máquina (rodando via Task Scheduler a cada 10s) chama `GET /pending/{hostname}`
+5. Servidor retorna `{ "pending": true }` — agente executa os checks (≈ 10–20 seg)
+6. Agente faz `POST /report` com o JSON dos resultados
+7. Servidor salva no SQLite, marca `pending_command` como `done`
+8. Painel atualiza (polling a cada 5s) e exibe o resultado
 
-### Pré-requisitos nas máquinas das lojas
+### Instalação do Agente nas Máquinas das Lojas
 
-- WinRM habilitado: `Enable-PSRemoting -Force`
-- Python 3.x instalado (ou `agent.exe` distribuído)
-- `agent.py` presente em `C:\TI\agent.py` (caminho configurável em `config.json`)
-- Firewall liberado: porta 5985 (WinRM) e acesso HTTP de saída para o servidor central na porta 8000
-- Credenciais WinRM: conta de administrador local ou de domínio configurada em `config.json`
+```powershell
+# Executar uma vez por máquina (não requer admin)
+New-Item -ItemType Directory -Force "C:\TI"
+# Copiar agent.py e agent_config.json para C:\TI\
+
+# Criar Tarefa Agendada (roda a cada 1 minuto, agent controla intervalo interno)
+schtasks /create /tn "TI-DiagAgent" /tr "python C:\TI\agent.py" /sc MINUTE /mo 1 /f
+```
+
+> Pré-requisito: Python 3 instalado na máquina (ou distribuir `agent.exe` compilado com PyInstaller — sem necessidade de Python).
 
 ---
 
@@ -249,14 +286,15 @@ Aberta ao clicar em um card (modal overlay):
 ```
 diagnostic-agent/
 ├── server/
-│   ├── main.py          # FastAPI app
+│   ├── main.py          # FastAPI app + endpoints
 │   ├── database.py      # SQLite helpers
-│   ├── winrm_runner.py  # Disparo via WinRM
+│   ├── config.json      # Configurações (porta, nomes Linx)
 │   ├── machines.json    # Cadastro de máquinas
 │   └── static/
 │       └── index.html   # Dashboard HTML/CSS/JS
 ├── agent/
-│   └── agent.py         # Coletor de checks (roda nas lojas)
+│   ├── agent.py         # Coletor de checks + polling
+│   └── agent_config.json # URL do servidor
 └── requirements.txt
 ```
 
@@ -269,3 +307,4 @@ diagnostic-agent/
 - UI para cadastro de máquinas
 - Suporte a sistemas operacionais além de Windows
 - Múltiplos PDVs por loja (estrutura suporta, mas não é requisito agora)
+- WinRM / execução remota ativa (substituído por polling)
