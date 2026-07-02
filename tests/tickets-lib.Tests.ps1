@@ -56,6 +56,33 @@ DATA,DESCRICAO,LOJAS
   }
 }
 
+Describe 'Get-SyncConcluidoLoja' {
+  BeforeAll {
+    $script:dir = Join-Path ([IO.Path]::GetTempPath()) ("sync_" + [guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $dir | Out-Null
+    Set-Content (Join-Path $dir 'loja_3.txt')  "ENVIA|OK|16:32"  -Encoding UTF8
+    Set-Content (Join-Path $dir 'loja_31.txt') "RECEBE|ERRO|10:40" -Encoding UTF8
+    Set-Content (Join-Path $dir 'loja_09.txt') "ENVIA|OK|16:35"  -Encoding UTF8  # padded
+  }
+  AfterAll { Remove-Item $dir -Recurse -Force }
+
+  It 'concluido quando arquivo de hoje tem Status OK' {
+    Get-SyncConcluidoLoja -Loja 3 -StatusDir $dir -Hoje (Get-Date) | Should -BeTrue
+  }
+  It 'nao concluido quando Status ERRO' {
+    Get-SyncConcluidoLoja -Loja 31 -StatusDir $dir -Hoje (Get-Date) | Should -BeFalse
+  }
+  It 'acha arquivo com zero a esquerda (loja_09.txt)' {
+    Get-SyncConcluidoLoja -Loja 9 -StatusDir $dir -Hoje (Get-Date) | Should -BeTrue
+  }
+  It 'nao concluido quando arquivo nao existe' {
+    Get-SyncConcluidoLoja -Loja 99 -StatusDir $dir -Hoje (Get-Date) | Should -BeFalse
+  }
+  It 'nao concluido quando arquivo e de outro dia' {
+    Get-SyncConcluidoLoja -Loja 3 -StatusDir $dir -Hoje (Get-Date).AddDays(1) | Should -BeFalse
+  }
+}
+
 Describe 'New-RelatorioHtml' {
   BeforeAll {
     $script:res = @(

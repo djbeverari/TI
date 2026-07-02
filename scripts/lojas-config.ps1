@@ -21,7 +21,9 @@ $PadraoBancoLoja = "Loja{0:D2}"           # {0:D2} = número com 2 dígitos (3 -
 $BancoRetaguarda = "Dorinhos_2022"        # banco consolidado na retaguarda (192.168.0.55)
 
 # --- Coluna que identifica a loja na tabela de tickets da retaguarda --
-$ColunaLojaRetaguarda = "<coluna_loja>"   # ex.: loja_id / numero_loja
+$ColunaLojaRetaguarda = "codigo_filial"   # filtro na retaguarda: WHERE codigo_filial = <numero>
+# OBS: confirmar no dry-run que codigo_filial usa o MESMO número da loja (3,4,...57)
+#      e não um código interno de filial diferente.
 
 # --- Retaguarda / Matriz ---------------------------------------------
 $Retaguarda = @{ Numero="RETAGUARDA"; Servidor="192.168.0.55"; Banco=$BancoRetaguarda }

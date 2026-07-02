@@ -1,0 +1,10 @@
+# Artefatos gerados pelo verificador de tickets
+scripts/exemplo-painel.html
+feriados_cache.json
+tickets.html
+relatorio.html
+
+# Credenciais (nunca versionar) — ficam em C:\Users\Daniella\ti\
+*.sql_cred
+*.sql_cred_retaguarda
+.email_cred

@@ -214,14 +214,14 @@ O DataSync grava um arquivo de status por loja (padrão `loja_<numero>.txt`, lid
 - [x] IPs das 38 lojas — obtidos do SSMS, em `scripts/lojas-config.ps1`
 - [x] Servidor da retaguarda — `192.168.0.55` ("Dorinhos")
 - [x] Autenticação — SQL Auth, `sa` (senha das lojas compartilhada; retaguarda com senha própria)
+- [x] Banco de cada loja — padrão `Loja<NN>` (loja 03 = `Loja03`), derivado do número
+- [x] Banco da retaguarda — `Dorinhos_2022`
+- [x] Coluna de loja na retaguarda — `codigo_filial` (`WHERE codigo_filial = <numero>`)
+- [x] Status do datasync — `C:\Logs\DataSync\status\loja_<num>.txt`, conteúdo `Tipo|Status|Hora`
 
-**A confirmar (rápido, via SSMS conectado no 192.168.0.55 e numa loja):**
-- [ ] Nome do banco Linx **na loja** (`$BancoLoja`) — `SELECT name FROM sys.databases` numa loja
-- [ ] Nome do banco consolidado **na retaguarda** (`$BancoRetaguarda`) — idem no 192.168.0.55
-- [ ] Nome exato da coluna que identifica a loja na retaguarda (`$ColunaLojaRetaguarda`)
-- [ ] Confirmar tabela/coluna `loja_venda.data_venda` no banco real
-- [ ] Senhas do `sa` gravadas em `.sql_cred` (lojas) e `.sql_cred_retaguarda` (retaguarda) via `guardar-senha-sql.ps1`
-
-**A confirmar (contra o datasync no servidor):**
-- [ ] Caminho e formato do arquivo de status do datasync (`loja_<numero>.txt`) para o "sync hoje"
-- [ ] Horário do agendamento (11:30) vs. término real do ciclo 10:30
+**A confirmar no dry-run (com as lojas online):**
+- [ ] Gravar as senhas do `sa` via `guardar-senha-sql.ps1` (`.sql_cred` + `.sql_cred_retaguarda`)
+- [ ] Confirmar que `codigo_filial` usa o mesmo número da loja (3,4,…57), não um código interno
+- [ ] Confirmar tabela/coluna `loja_venda.data_venda` no banco real (loja e retaguarda)
+- [ ] Confirmar horário do agendamento (11:30) vs. término real do ciclo 10:30
+- [ ] Confirmar a pasta servida pelo `DataSyncHTTP` (para o `tickets.html` aparecer na 8080)

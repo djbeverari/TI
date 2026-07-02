@@ -113,15 +113,24 @@ function Get-TicketCount {
 
 # ---------------------------------------------------------------------
 # A loja já concluiu o sync de hoje? (lê o status do datasync)
-# CONFIRMAR caminho/format contra gerar-painel-datasync.ps1.
+# Formato gravado pelo data-sync-automacao.ps1 em C:\Logs\DataSync\status:
+#   arquivo loja_<num>.txt  conteúdo "Tipo|Status|Hora" (ex.: ENVIA|OK|16:32)
+# Considera concluído = arquivo de hoje com Status = OK.
 # ---------------------------------------------------------------------
 function Get-SyncConcluidoLoja {
     param([int]$Loja, [string]$StatusDir, [datetime]$Hoje = (Get-Date))
-    $arquivo = Join-Path $StatusDir ("loja_{0}.txt" -f $Loja)
-    if (-not (Test-Path $arquivo)) { return $false }
-    $conteudo = Get-Content $arquivo -Raw
-    $doDia = (Get-Item $arquivo).LastWriteTime.Date -eq $Hoje.Date
-    return ($doDia -and $conteudo -match 'OK|SUCESSO|SUCCESS')
+    # Tolera nome com e sem zero à esquerda (loja_3.txt / loja_03.txt)
+    $candidatos = @(
+        (Join-Path $StatusDir ("loja_{0}.txt"    -f $Loja)),
+        (Join-Path $StatusDir ("loja_{0:D2}.txt" -f $Loja))
+    ) | Select-Object -Unique
+    foreach ($arquivo in $candidatos) {
+        if (-not (Test-Path $arquivo)) { continue }
+        if ((Get-Item $arquivo).LastWriteTime.Date -ne $Hoje.Date) { continue }
+        $c = Get-Content $arquivo -Raw -Encoding UTF8
+        if ($c -match '^\s*(\w+)\|(\w+)\|') { return ($matches[2] -eq 'OK') }
+    }
+    return $false
 }
 
 # ---------------------------------------------------------------------
