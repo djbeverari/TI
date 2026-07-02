@@ -1,14 +1,17 @@
 # Verificador de Tickets Diário — Design Spec
 
-**Data:** 2026-05-22  
-**Autor:** Daniella  
-**Status:** Aprovado
+**Data:** 2026-05-22
+**Revisão:** 2026-07-02 (v2 — autenticação, agendamento, lógica pendente/divergente)
+**Autor:** Daniella
+**Status:** Aprovado — pronto para plano de implementação
 
 ---
 
 ## Problema
 
-Após a sincronização diária (datasync) dos bancos das 38 lojas com a retaguarda, é preciso verificar manualmente se a quantidade de tickets de venda do dia anterior chegou corretamente ao banco da retaguarda. O processo é feito manualmente hoje e precisa ser automatizado com um painel visual acessível por qualquer máquina da rede.
+Os tickets de venda **nascem no banco de cada loja** e sobem para a retaguarda via DataSync (Linx). É preciso verificar diariamente se a quantidade de tickets do período chegou corretamente à retaguarda. Hoje isso é feito manualmente. O objetivo é automatizar a comparação e alertar, num painel HTML acessível por qualquer máquina da rede, as lojas cuja contagem divergiu.
+
+**Direção da verdade:** origem = loja. O caso que alerta é **Retaguarda < Loja** (a loja tem ticket que não chegou na retaguarda).
 
 ---
 
@@ -16,28 +19,32 @@ Após a sincronização diária (datasync) dos bancos das 38 lojas com a retagua
 
 Script PowerShell agendado via Task Scheduler que:
 1. Calcula as datas a verificar (considerando fins de semana e feriados)
-2. Consulta os 38 bancos das lojas e o banco da retaguarda via SQL Server
+2. Consulta os 38 bancos das lojas e o banco da retaguarda via SQL Server (SQL Auth)
 3. Compara as contagens de tickets por loja
-4. Gera um painel HTML acessível via `http://192.168.0.147:8080`
+4. Para cada loja com Retaguarda < Loja, consulta o status do DataSync para separar "pendente" (ainda vai sincronizar) de "divergente" (faltou de verdade)
+5. Gera um painel HTML acessível via `http://192.168.0.147:8080`
 
 ---
 
 ## Arquitetura
 
 ```
-[Task Scheduler] → [verifica-tickets.ps1]
+[Task Scheduler ~11:30] → [verifica-tickets.ps1]
                         │
                         ├── Calcula datas a verificar
-                        ├── Carrega feriados (API + CSV municipal)
-                        ├── Consulta 38 bancos de loja (SQL Server)
-                        ├── Consulta banco da retaguarda (SQL Server)
+                        ├── Carrega feriados (Brasil API + CSV municipal)
+                        ├── Consulta 38 bancos de loja (SQL Server, SQL Auth)
+                        ├── Consulta banco da retaguarda (SQL Server, SQL Auth)
                         ├── Compara contagens por loja/data
+                        ├── Consulta status do DataSync (pendente vs divergente)
                         └── Gera relatorio.html
                                     │
                        [Python http.server — porta 8080]
                                     │
                        http://192.168.0.147:8080
 ```
+
+Reaproveita a infra já existente do DataSync no servidor `192.168.0.147` (Python http.server na 8080, Task Scheduler).
 
 ---
 
@@ -46,10 +53,11 @@ Script PowerShell agendado via Task Scheduler que:
 | Arquivo | Localização | Descrição |
 |---|---|---|
 | `verifica-tickets.ps1` | `C:\Users\Daniella\ti\` | Script principal |
+| `lojas-config.ps1` (ou `.csv`) | `C:\Users\Daniella\ti\` | Config de conexão por loja (IP/banco/usuário/senha) — **preenchido pela Daniella** |
 | `feriados_municipais.csv` | `C:\Users\Daniella\ti\` | Feriados municipais por loja |
 | `feriados_cache.json` | `C:\Users\Daniella\ti\` | Cache de feriados nacionais/estaduais (gerado automaticamente) |
 | `relatorio.html` | `C:\WebRelatorios\` | Painel HTML gerado |
-| Serviço web | `192.168.0.147:8080` | Python http.server como serviço Windows |
+| Serviço web | `192.168.0.147:8080` | Python http.server como serviço Windows (já existente — DataSyncHTTP) |
 
 ---
 
@@ -78,34 +86,66 @@ DATA,DESCRICAO,LOJAS
 
 ## Conexões SQL Server
 
+**Autenticação:** SQL Auth (usuário/senha) para lojas e retaguarda. As credenciais ficam no `lojas-config.ps1`, fora do script principal.
+
 ### Retaguarda
 - IP: `192.168.0.147`
 - Banco: a definir (informado pela Daniella)
-- Autenticação: Windows Authentication ou SQL Authentication (a definir)
+- Identificação da loja: coluna de número de loja na tabela de tickets (ex.: `loja_id` / `numero_loja` — **nome exato a confirmar**), filtrada por `WHERE <coluna_loja> = <numero>`
 
 ### Lojas (38 lojas)
 IPs e nomes de banco a serem fornecidos pela Daniella. As lojas existentes são:
 `3, 4, 5, 6, 7, 9, 14, 16, 17, 21, 23, 26, 28, 29, 31, 32, 33, 34, 36, 37, 38, 40, 41, 42, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57`
 
-Estrutura de configuração no script:
+Estrutura de configuração (`lojas-config.ps1`):
 ```powershell
 $Lojas = @(
     @{ Numero=3;  IP="192.168.X.X"; Banco="NOME_BANCO"; Usuario="sa"; Senha="senha" },
     ...
 )
+$Retaguarda = @{ IP="192.168.0.147"; Banco="NOME_RETAGUARDA"; Usuario="sa"; Senha="senha"; ColunaLoja="numero_loja" }
 ```
 
 ---
 
 ## Query SQL
 
+**Na loja** (banco local, sem filtro de loja):
 ```sql
 SELECT COUNT(*) AS total
 FROM loja_venda
 WHERE data_venda IN ('2026-05-21', '2026-05-20')
 ```
 
-A mesma query é executada tanto no banco da loja quanto no banco da retaguarda (filtrando por loja na retaguarda, se necessário).
+**Na retaguarda** (mesma tabela, filtrando pela loja):
+```sql
+SELECT COUNT(*) AS total
+FROM loja_venda
+WHERE data_venda IN ('2026-05-21', '2026-05-20')
+  AND <coluna_loja> = 3
+```
+
+`loja_venda.data_venda` confirmado; 1 ticket = 1 linha. Nome da `<coluna_loja>` na retaguarda a confirmar no config.
+
+---
+
+## Lógica de Status (pendente vs divergente)
+
+Para cada loja, comparando `TicketsLoja` (origem) com `TicketsRetaguarda`:
+
+| Situação | Significado | Status | Cor |
+|---|---|---|---|
+| `Retaguarda == Loja` | tudo subiu | **OK** | Verde |
+| `Retaguarda < Loja` **e** loja ainda **não** completou o sync de hoje | sync atrasado, deve resolver nos próximos ciclos | **PENDENTE** | Amarelo |
+| `Retaguarda < Loja` **e** loja **já** sincronizou hoje | ticket da loja não chegou — falha real | **DIVERGENTE** | Vermelho |
+| `Retaguarda > Loja` | retaguarda tem a mais (possível duplicação) | **ATENÇÃO** | Laranja |
+| ambos zerados | sem movimento no período | **SEM MOVIMENTO** | Cinza |
+| banco inacessível | falha de conexão | **ERRO DE CONEXÃO** | Laranja (com ícone distinto) |
+
+### Fonte do status de sync
+O DataSync grava um arquivo de status por loja (padrão `loja_<numero>.txt`, lido hoje pelo `gerar-painel-datasync.ps1`). O verificador lê esse status para saber se a loja já completou o sync do dia. **Caminho e formato exatos a confirmar contra o script do datasync no servidor** (`C:\Users\Datasync\Desktop\ti\`).
+
+> Racional do agendamento: rodar às 11:30, logo após o ciclo `DataSync_1030`, pega o dia anterior já consolidado na maioria das lojas. Lojas notoriamente lentas (ex.: 31, 03) podem não ter sincronizado ainda — por isso a distinção pendente/divergente via status do datasync, para evitar alarme falso.
 
 ---
 
@@ -115,7 +155,9 @@ A mesma query é executada tanto no banco da loja quanto no banco da retaguarda 
 - Timestamp da última atualização
 - Período verificado
 - Total de lojas OK
-- Total de lojas com divergência
+- Total de lojas PENDENTES
+- Total de lojas DIVERGENTES
+- Total de lojas em ATENÇÃO / ERRO
 - Total geral de tickets (soma de todas as lojas)
 
 ### Tabela de lojas
@@ -125,19 +167,23 @@ A mesma query é executada tanto no banco da loja quanto no banco da retaguarda 
 | Tickets Loja | Contagem no banco local da loja |
 | Tickets Retaguarda | Contagem no banco da retaguarda |
 | Diferença | Tickets Loja − Tickets Retaguarda |
-| Status | ✅ OK ou ❌ DIVERGENTE |
+| Sync hoje | Se a loja já completou o sync do dia (do status do datasync) |
+| Status | OK / PENDENTE / DIVERGENTE / ATENÇÃO / SEM MOVIMENTO / ERRO |
 
 ### Visual
-- Linha **verde** = OK (contagens iguais)
-- Linha **vermelha** = DIVERGENTE (contagens diferentes)
-- Linha **cinza** = loja sem movimento no período (ambos zerados)
+- Linha **verde** = OK
+- Linha **amarela** = PENDENTE (sync atrasado)
+- Linha **vermelha** = DIVERGENTE (falha real — destaque forte)
+- Linha **laranja** = ATENÇÃO (retaguarda > loja) ou ERRO DE CONEXÃO
+- Linha **cinza** = sem movimento no período
 - Linha de **TOTAL GERAL** ao final da tabela
 
 ---
 
 ## Tratamento de Erros
 
-- Se um banco de loja estiver inacessível: exibe `ERRO DE CONEXÃO` em amarelo na linha da loja
+- Se um banco de loja estiver inacessível: linha **ERRO DE CONEXÃO** (laranja), não conta como divergência
+- Se o status do datasync não puder ser lido: assume "sync não confirmado" e trata Retaguarda < Loja como PENDENTE (conservador, evita falso vermelho)
 - Se a Brasil API estiver offline: usa apenas o cache local; se o cache também falhar, usa só os feriados nacionais fixos hardcoded
 - Log de execução gravado em `C:\Logs\VerificaTickets\verifica_YYYY-MM-DD.log`
 
@@ -145,26 +191,26 @@ A mesma query é executada tanto no banco da loja quanto no banco da retaguarda 
 
 ## Agendamento (Task Scheduler)
 
-- **Trigger:** diário, de segunda a sexta, às **08:00**
+- **Trigger:** diário, de segunda a sexta, às **11:30**
 - **Ação:** executar `verifica-tickets.ps1`
 - **Conta:** conta de serviço com acesso à rede e aos bancos
-
-> Horário de 08:00 pressupõe que o datasync das 07:xx já finalizou. Ajustar conforme horário real do último sync.
+- **Racional:** logo após o término do ciclo `DataSync_1030` (~10:30 + ~45 min), verificando o dia anterior
 
 ---
 
 ## Serviço Web
 
-- Python `http.server` servindo `C:\WebRelatorios\` na porta `8080`
-- Configurado como serviço Windows via `NSSM` (Non-Sucking Service Manager) para iniciar automaticamente
+- Python `http.server` servindo `C:\WebRelatorios\` na porta `8080` (serviço `DataSyncHTTP` já existente)
 - URL de acesso: `http://192.168.0.147:8080`
+- O `relatorio.html` do verificador pode ganhar um nome próprio (ex.: `tickets.html`) para não colidir com o painel do datasync — a confirmar na implementação
 
 ---
 
-## Itens Pendentes (necessários antes da implementação)
+## Itens Pendentes (dados que a Daniella precisa fornecer)
 
-- [ ] Lista completa de IPs e nomes de bancos das 38 lojas
-- [ ] Nome do banco da retaguarda e tipo de autenticação (Windows ou SQL)
-- [ ] Nome exato da tabela e coluna de data (`loja_venda.data_venda` — confirmar)
-- [ ] Confirmar horário ideal para agendamento (após término do datasync)
-- [ ] Na retaguarda, como a loja é identificada? (coluna `loja_id`, `numero_loja`, etc.)
+- [ ] Lista completa de IPs e nomes de bancos das 38 lojas + usuário/senha SQL
+- [ ] Nome do banco da retaguarda + usuário/senha SQL
+- [ ] Nome exato da coluna que identifica a loja na retaguarda (`loja_id` / `numero_loja` / outro)
+- [ ] Confirmar tabela/coluna `loja_venda.data_venda` no banco real
+- [ ] Confirmar caminho e formato do arquivo de status do datasync (`loja_<numero>.txt`) para leitura do "sync hoje"
+- [ ] Confirmar horário do agendamento (11:30) vs. horário real de término do ciclo 10:30
