@@ -86,7 +86,7 @@ DATA,DESCRICAO,LOJAS
 
 ## Conexões SQL Server
 
-**Autenticação:** SQL Auth com **usuário `sa` e senha compartilhada** entre todas as lojas e a retaguarda. A senha NÃO fica no repositório — é guardada num arquivo protegido por DPAPI (`C:\Users\Daniella\ti\.sql_cred`, padrão do `.email_cred` do datasync). IPs e mapeamento de loja ficam em `scripts/lojas-config.ps1`.
+**Autenticação:** SQL Auth com usuário `sa`. As **38 lojas compartilham a mesma senha**; a **retaguarda (Dorinhos) tem senha diferente**. Nenhuma senha fica no repositório — são guardadas em dois arquivos protegidos por DPAPI (`.sql_cred` para as lojas e `.sql_cred_retaguarda` para a retaguarda, em `C:\Users\Daniella\ti\`, seguindo o padrão do `.email_cred` do datasync). IPs e mapeamento de loja ficam em `scripts/lojas-config.ps1`.
 
 ### Retaguarda / Matriz
 - Servidor: **`192.168.0.55`** (cadastrado como "Dorinhos" no SSMS) — **não** é o `192.168.0.147` (esse é só o servidor de automação do datasync)
@@ -99,7 +99,8 @@ DATA,DESCRICAO,LOJAS
 Estrutura de configuração (`scripts/lojas-config.ps1`):
 ```powershell
 $SqlUser = "sa"
-$SqlCredFile = "C:\Users\Daniella\ti\.sql_cred"   # senha protegida (DPAPI)
+$SqlCredFile           = "C:\Users\Daniella\ti\.sql_cred"            # senha das lojas
+$SqlCredFileRetaguarda = "C:\Users\Daniella\ti\.sql_cred_retaguarda" # senha da retaguarda
 $Retaguarda = @{ Servidor="192.168.0.55"; Banco="<BANCO_RETAGUARDA>" }
 $Lojas = @(
     @{ Numero=3;  Servidor="192.168.11.100\sqlexpress" },
@@ -212,14 +213,14 @@ O DataSync grava um arquivo de status por loja (padrão `loja_<numero>.txt`, lid
 **Resolvidos:**
 - [x] IPs das 38 lojas — obtidos do SSMS, em `scripts/lojas-config.ps1`
 - [x] Servidor da retaguarda — `192.168.0.55` ("Dorinhos")
-- [x] Autenticação — SQL Auth, `sa` com senha compartilhada
+- [x] Autenticação — SQL Auth, `sa` (senha das lojas compartilhada; retaguarda com senha própria)
 
 **A confirmar (rápido, via SSMS conectado no 192.168.0.55 e numa loja):**
 - [ ] Nome do banco Linx **na loja** (`$BancoLoja`) — `SELECT name FROM sys.databases` numa loja
 - [ ] Nome do banco consolidado **na retaguarda** (`$BancoRetaguarda`) — idem no 192.168.0.55
 - [ ] Nome exato da coluna que identifica a loja na retaguarda (`$ColunaLojaRetaguarda`)
 - [ ] Confirmar tabela/coluna `loja_venda.data_venda` no banco real
-- [ ] Senha do `sa` gravada em `C:\Users\Daniella\ti\.sql_cred` (script `guardar-senha-sql.ps1`)
+- [ ] Senhas do `sa` gravadas em `.sql_cred` (lojas) e `.sql_cred_retaguarda` (retaguarda) via `guardar-senha-sql.ps1`
 
 **A confirmar (contra o datasync no servidor):**
 - [ ] Caminho e formato do arquivo de status do datasync (`loja_<numero>.txt`) para o "sync hoje"

@@ -37,22 +37,26 @@ Convenção de nomes de status usada em TODO o projeto (string exata):
 Run: `powershell -Command "Get-Module -ListAvailable Pester | Select-Object Version"`
 Expected: uma versão 5.x listada. Se não houver, rode `Install-Module Pester -Scope CurrentUser -Force -SkipPublisherCheck`.
 
-- [ ] **Step 2: Criar o script que guarda a senha do sa (DPAPI)**
+- [ ] **Step 2: Criar o script que guarda as senhas do sa (DPAPI)**
+
+As 38 lojas compartilham uma senha; a retaguarda tem outra. Grava as duas.
 
 ```powershell
 # scripts/guardar-senha-sql.ps1
-# Grava a senha do 'sa' protegida por DPAPI (só o usuário atual descriptografa).
-$cred = Read-Host -AsSecureString "Senha do sa (compartilhada entre as lojas)"
-$enc  = $cred | ConvertFrom-SecureString
-$path = "C:\Users\Daniella\ti\.sql_cred"
-Set-Content -Path $path -Value $enc -Encoding ASCII
-Write-Host "Senha gravada em $path"
+# Grava as senhas do 'sa' protegidas por DPAPI (só o usuário atual descriptografa).
+$lojas = Read-Host -AsSecureString "Senha do sa das LOJAS (compartilhada)"
+($lojas | ConvertFrom-SecureString) | Set-Content "C:\Users\Daniella\ti\.sql_cred" -Encoding ASCII
+
+$reta = Read-Host -AsSecureString "Senha do sa da RETAGUARDA (Dorinhos)"
+($reta | ConvertFrom-SecureString) | Set-Content "C:\Users\Daniella\ti\.sql_cred_retaguarda" -Encoding ASCII
+
+Write-Host "Senhas gravadas (.sql_cred e .sql_cred_retaguarda)"
 ```
 
-- [ ] **Step 3: Rodar e gravar a senha**
+- [ ] **Step 3: Rodar e gravar as senhas**
 
 Run: `powershell -ExecutionPolicy Bypass -File scripts/guardar-senha-sql.ps1`
-Expected: digita a senha do sa; arquivo `.sql_cred` criado. (Confirmar: `Test-Path C:\Users\Daniella\ti\.sql_cred` → True.)
+Expected: digita as duas senhas; arquivos criados. (Confirmar: `Test-Path C:\Users\Daniella\ti\.sql_cred` e `.sql_cred_retaguarda` → True.)
 
 - [ ] **Step 4: Commit**
 
@@ -574,9 +578,14 @@ function Write-VerificaLog {
     Add-Content -Path $arq -Value "[$ts] [$Nivel] $Msg"
 }
 
-# Senha do sa (DPAPI)
-$sec = Get-Content $SqlCredFile | ConvertTo-SecureString
-$pw  = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($sec))
+# Senhas do sa (DPAPI) — lojas e retaguarda são diferentes
+function Read-SqlSenha {
+    param([string]$Arquivo)
+    $sec = Get-Content $Arquivo | ConvertTo-SecureString
+    [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($sec))
+}
+$pwLojas      = Read-SqlSenha $SqlCredFile
+$pwRetaguarda = Read-SqlSenha $SqlCredFileRetaguarda
 
 $hoje = Get-Date
 $ano  = $hoje.Year
@@ -590,9 +599,9 @@ $resultados = foreach ($loja in $Lojas) {
 
     $erro = $false; $tl = 0; $tr = 0
     try {
-        $tl = Get-TicketCount -Servidor $loja.Servidor -Banco $BancoLoja -Usuario $SqlUser -Senha $pw `
+        $tl = Get-TicketCount -Servidor $loja.Servidor -Banco $BancoLoja -Usuario $SqlUser -Senha $pwLojas `
                               -Datas $datas -ColunaLoja $null -Loja $loja.Numero
-        $tr = Get-TicketCount -Servidor $Retaguarda.Servidor -Banco $BancoRetaguarda -Usuario $SqlUser -Senha $pw `
+        $tr = Get-TicketCount -Servidor $Retaguarda.Servidor -Banco $BancoRetaguarda -Usuario $SqlUser -Senha $pwRetaguarda `
                               -Datas $datas -ColunaLoja $ColunaLojaRetaguarda -Loja $loja.Numero
     } catch {
         $erro = $true

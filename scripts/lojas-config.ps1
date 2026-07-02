@@ -4,12 +4,14 @@
 # NÃO comitar senha aqui. A senha do 'sa' é lida de um arquivo protegido.
 # =====================================================================
 
-# --- Credencial compartilhada (sa) -----------------------------------
-# Todas as lojas e a retaguarda usam o mesmo usuário/senha SQL.
-# A senha é guardada uma vez, protegida por DPAPI (só o seu usuário lê),
-# em C:\Users\Daniella\ti\.sql_cred  (ver script guardar-senha-sql.ps1).
+# --- Credenciais (sa) ------------------------------------------------
+# As 38 LOJAS compartilham a MESMA senha do sa.
+# A RETAGUARDA (Dorinhos) tem uma senha DIFERENTE.
+# Ambas guardadas protegidas por DPAPI (só o seu usuário lê).
+# Ver guardar-senha-sql.ps1.
 $SqlUser = "sa"
-$SqlCredFile = "C:\Users\Daniella\ti\.sql_cred"
+$SqlCredFile           = "C:\Users\Daniella\ti\.sql_cred"            # senha das lojas
+$SqlCredFileRetaguarda = "C:\Users\Daniella\ti\.sql_cred_retaguarda" # senha da retaguarda
 
 # --- Bancos (confirmar nomes reais) ----------------------------------
 # Nome do banco Linx em CADA loja (SQL Express local). Costuma ser igual
