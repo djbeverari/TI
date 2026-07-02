@@ -86,24 +86,25 @@ DATA,DESCRICAO,LOJAS
 
 ## Conexões SQL Server
 
-**Autenticação:** SQL Auth (usuário/senha) para lojas e retaguarda. As credenciais ficam no `lojas-config.ps1`, fora do script principal.
+**Autenticação:** SQL Auth com **usuário `sa` e senha compartilhada** entre todas as lojas e a retaguarda. A senha NÃO fica no repositório — é guardada num arquivo protegido por DPAPI (`C:\Users\Daniella\ti\.sql_cred`, padrão do `.email_cred` do datasync). IPs e mapeamento de loja ficam em `scripts/lojas-config.ps1`.
 
-### Retaguarda
-- IP: `192.168.0.147`
-- Banco: a definir (informado pela Daniella)
+### Retaguarda / Matriz
+- Servidor: **`192.168.0.55`** (cadastrado como "Dorinhos" no SSMS) — **não** é o `192.168.0.147` (esse é só o servidor de automação do datasync)
+- Banco: a confirmar (`SELECT name FROM sys.databases` no 192.168.0.55)
 - Identificação da loja: coluna de número de loja na tabela de tickets (ex.: `loja_id` / `numero_loja` — **nome exato a confirmar**), filtrada por `WHERE <coluna_loja> = <numero>`
 
 ### Lojas (38 lojas)
-IPs e nomes de banco a serem fornecidos pela Daniella. As lojas existentes são:
-`3, 4, 5, 6, 7, 9, 14, 16, 17, 21, 23, 26, 28, 29, 31, 32, 33, 34, 36, 37, 38, 40, 41, 42, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57`
+**IPs já obtidos** do `RegSrvr.xml` do SSMS (Registered Servers) e gravados em `scripts/lojas-config.ps1`. Todas rodam SQL Express (`\sqlexpress`), usuário `sa`. Lojas: `3, 4, 5, 6, 7, 9, 14, 16, 17, 21, 23, 26, 28, 29, 31, 32, 33, 34, 36, 37, 38, 40, 41, 42, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57`.
 
-Estrutura de configuração (`lojas-config.ps1`):
+Estrutura de configuração (`scripts/lojas-config.ps1`):
 ```powershell
+$SqlUser = "sa"
+$SqlCredFile = "C:\Users\Daniella\ti\.sql_cred"   # senha protegida (DPAPI)
+$Retaguarda = @{ Servidor="192.168.0.55"; Banco="<BANCO_RETAGUARDA>" }
 $Lojas = @(
-    @{ Numero=3;  IP="192.168.X.X"; Banco="NOME_BANCO"; Usuario="sa"; Senha="senha" },
+    @{ Numero=3;  Servidor="192.168.11.100\sqlexpress" },
     ...
 )
-$Retaguarda = @{ IP="192.168.0.147"; Banco="NOME_RETAGUARDA"; Usuario="sa"; Senha="senha"; ColunaLoja="numero_loja" }
 ```
 
 ---
@@ -206,11 +207,20 @@ O DataSync grava um arquivo de status por loja (padrão `loja_<numero>.txt`, lid
 
 ---
 
-## Itens Pendentes (dados que a Daniella precisa fornecer)
+## Itens Pendentes
 
-- [ ] Lista completa de IPs e nomes de bancos das 38 lojas + usuário/senha SQL
-- [ ] Nome do banco da retaguarda + usuário/senha SQL
-- [ ] Nome exato da coluna que identifica a loja na retaguarda (`loja_id` / `numero_loja` / outro)
+**Resolvidos:**
+- [x] IPs das 38 lojas — obtidos do SSMS, em `scripts/lojas-config.ps1`
+- [x] Servidor da retaguarda — `192.168.0.55` ("Dorinhos")
+- [x] Autenticação — SQL Auth, `sa` com senha compartilhada
+
+**A confirmar (rápido, via SSMS conectado no 192.168.0.55 e numa loja):**
+- [ ] Nome do banco Linx **na loja** (`$BancoLoja`) — `SELECT name FROM sys.databases` numa loja
+- [ ] Nome do banco consolidado **na retaguarda** (`$BancoRetaguarda`) — idem no 192.168.0.55
+- [ ] Nome exato da coluna que identifica a loja na retaguarda (`$ColunaLojaRetaguarda`)
 - [ ] Confirmar tabela/coluna `loja_venda.data_venda` no banco real
-- [ ] Confirmar caminho e formato do arquivo de status do datasync (`loja_<numero>.txt`) para leitura do "sync hoje"
-- [ ] Confirmar horário do agendamento (11:30) vs. horário real de término do ciclo 10:30
+- [ ] Senha do `sa` gravada em `C:\Users\Daniella\ti\.sql_cred` (script `guardar-senha-sql.ps1`)
+
+**A confirmar (contra o datasync no servidor):**
+- [ ] Caminho e formato do arquivo de status do datasync (`loja_<numero>.txt`) para o "sync hoje"
+- [ ] Horário do agendamento (11:30) vs. término real do ciclo 10:30
