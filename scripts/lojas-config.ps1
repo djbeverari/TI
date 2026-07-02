@@ -10,8 +10,9 @@
 # Ambas guardadas protegidas por DPAPI (só o seu usuário lê).
 # Ver guardar-senha-sql.ps1.
 $SqlUser = "sa"
-$SqlCredFile           = "C:\Users\Daniella\ti\.sql_cred"            # senha das lojas
-$SqlCredFileRetaguarda = "C:\Users\Daniella\ti\.sql_cred_retaguarda" # senha da retaguarda
+# Caminhos das senhas RELATIVOS à pasta dos scripts (funciona local e no servidor).
+$SqlCredFile           = Join-Path $PSScriptRoot ".sql_cred"            # senha das lojas
+$SqlCredFileRetaguarda = Join-Path $PSScriptRoot ".sql_cred_retaguarda" # senha da retaguarda
 
 # --- Bancos ----------------------------------------------------------
 # Cada loja tem o banco nomeado com o próprio número: Loja03, Loja04, ... Loja57
