@@ -11,8 +11,9 @@ $RemoteDir = 'C:\Users\Datasync\Desktop\ti'
 
 Write-Host "== Deploy do Verificador de Tickets ==" -ForegroundColor Cyan
 
-# 1) Credencial do Windows do servidor (conta Datasync)
-$cred = Get-Credential -UserName 'Datasync' -Message "Senha do usuario Datasync no servidor $Servidor"
+# 1) Credencial do Windows do servidor (conta Datasync) — prompt no terminal (sem popup)
+$senhaWin = Read-Host -AsSecureString "Senha do Windows do usuario Datasync (servidor $Servidor)"
+$cred = New-Object System.Management.Automation.PSCredential('Datasync', $senhaWin)
 $sess = New-PSSession -ComputerName $Servidor -Credential $cred
 
 try {
