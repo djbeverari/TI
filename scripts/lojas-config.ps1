@@ -13,12 +13,12 @@ $SqlUser = "sa"
 $SqlCredFile           = "C:\Users\Daniella\ti\.sql_cred"            # senha das lojas
 $SqlCredFileRetaguarda = "C:\Users\Daniella\ti\.sql_cred_retaguarda" # senha da retaguarda
 
-# --- Bancos (confirmar nomes reais) ----------------------------------
-# Nome do banco Linx em CADA loja (SQL Express local). Costuma ser igual
-# em todas. Confirmar com: SELECT name FROM sys.databases;
-$BancoLoja = "<BANCO_LINX_LOJA>"          # ex.: LinxPOS / Linx / etc.
+# --- Bancos ----------------------------------------------------------
+# Cada loja tem o banco nomeado com o próprio número: Loja03, Loja04, ... Loja57
+# (confirmado na loja 03 = "Loja03"). Derivado por loja mais abaixo.
+$PadraoBancoLoja = "Loja{0:D2}"           # {0:D2} = número com 2 dígitos (3 -> Loja03)
 # Nome do banco consolidado na retaguarda (Dorinhos / 192.168.0.55):
-$BancoRetaguarda = "<BANCO_RETAGUARDA>"   # confirmar no SSMS
+$BancoRetaguarda = "Dorinhos_2022"        # banco consolidado na retaguarda (192.168.0.55)
 
 # --- Coluna que identifica a loja na tabela de tickets da retaguarda --
 $ColunaLojaRetaguarda = "<coluna_loja>"   # ex.: loja_id / numero_loja
@@ -69,3 +69,6 @@ $Lojas = @(
 )
 
 # Total: 38 lojas. Fonte: RegSrvr.xml (SSMS Registered Servers), 2026-07-02.
+
+# Deriva o nome do banco de cada loja (Loja03, Loja04, ...) a partir do número.
+foreach ($l in $Lojas) { $l.Banco = ($PadraoBancoLoja -f [int]$l.Numero) }

@@ -101,12 +101,11 @@ Anote o nome exato da coluna de loja. Se a tabela não se chamar `loja_venda`, a
 
 - [ ] **Step 4: Preencher o config**
 
-Editar `scripts/lojas-config.ps1`:
+Editar `scripts/lojas-config.ps1` (já preenchidos: `$BancoRetaguarda="Dorinhos_2022"` e `$PadraoBancoLoja="Loja{0:D2}"` — banco da loja = `Loja` + número, ex. loja 03 = `Loja03`). Falta só:
 ```powershell
-$BancoLoja = "NOME_REAL_LOJA"            # do Step 2
-$BancoRetaguarda = "NOME_REAL_RETAGUARDA" # do Step 1
 $ColunaLojaRetaguarda = "coluna_real"     # do Step 3
 ```
+Confirmar que o padrão `Loja{0:D2}` vale para todas (ex. loja 14 = `Loja14`, loja 9 = `Loja09`).
 
 - [ ] **Step 5: Validar a conexão numa loja (smoke test)**
 
@@ -114,11 +113,11 @@ $ColunaLojaRetaguarda = "coluna_real"     # do Step 3
 . .\scripts\lojas-config.ps1
 $sec = Get-Content $SqlCredFile | ConvertTo-SecureString
 $pw  = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($sec))
-$cs  = "Server=192.168.11.100\sqlexpress;Database=$BancoLoja;User Id=$SqlUser;Password=$pw;Connect Timeout=15"
+$cs  = "Server=192.168.11.100\sqlexpress;Database=$($Lojas[0].Banco);User Id=$SqlUser;Password=$pw;Connect Timeout=15"
 $cn  = New-Object System.Data.SqlClient.SqlConnection $cs
 $cn.Open(); Write-Host "Conectou:" $cn.State; $cn.Close()
 ```
-Expected: `Conectou: Open`. Se falhar, revisar `$BancoLoja`/senha/firewall antes de seguir.
+Expected: `Conectou: Open` (loja 03, banco `Loja03`). Se falhar, revisar nome do banco/senha/firewall antes de seguir.
 
 - [ ] **Step 6: Commit**
 
@@ -426,7 +425,7 @@ function Get-SyncConcluidoLoja {
 . .\scripts\lojas-config.ps1; . .\scripts\tickets-lib.ps1
 $sec = Get-Content $SqlCredFile | ConvertTo-SecureString
 $pw  = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($sec))
-Get-TicketCount -Servidor "192.168.11.100\sqlexpress" -Banco $BancoLoja -Usuario $SqlUser -Senha $pw `
+Get-TicketCount -Servidor "192.168.11.100\sqlexpress" -Banco "Loja03" -Usuario $SqlUser -Senha $pw `
     -Datas @([datetime]::Today.AddDays(-1)) -ColunaLoja $null -Loja 3
 ```
 Expected: um número inteiro (contagem de ontem na loja 03). Confirma tabela/coluna reais.
@@ -599,7 +598,7 @@ $resultados = foreach ($loja in $Lojas) {
 
     $erro = $false; $tl = 0; $tr = 0
     try {
-        $tl = Get-TicketCount -Servidor $loja.Servidor -Banco $BancoLoja -Usuario $SqlUser -Senha $pwLojas `
+        $tl = Get-TicketCount -Servidor $loja.Servidor -Banco $loja.Banco -Usuario $SqlUser -Senha $pwLojas `
                               -Datas $datas -ColunaLoja $null -Loja $loja.Numero
         $tr = Get-TicketCount -Servidor $Retaguarda.Servidor -Banco $BancoRetaguarda -Usuario $SqlUser -Senha $pwRetaguarda `
                               -Datas $datas -ColunaLoja $ColunaLojaRetaguarda -Loja $loja.Numero
@@ -693,7 +692,7 @@ git commit -m "chore: verificador de tickets completo e testado"
 ## Notas de confirmação (pendentes de dados reais)
 
 Estes valores precisam ser confirmados durante a execução (Tasks 1 e 5) e podem exigir pequenos ajustes na lib:
-- `$BancoLoja`, `$BancoRetaguarda`, `$ColunaLojaRetaguarda` (Task 1)
+- `$ColunaLojaRetaguarda` (Task 1) — `$BancoRetaguarda="Dorinhos_2022"` e banco por loja (`Loja{0:D2}`) já resolvidos
 - Nome real da tabela de tickets (assumido `loja_venda`) e da coluna de data (`data_venda`)
 - Caminho/format real do status do datasync em `Get-SyncConcluidoLoja` (Task 5) — confirmar contra `gerar-painel-datasync.ps1`
 - Pasta servida pelo `DataSyncHTTP` (Task 8)
