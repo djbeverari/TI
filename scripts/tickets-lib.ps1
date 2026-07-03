@@ -152,6 +152,12 @@ function Get-StatusCiclo {
         return [pscustomobject]@{ Nome=$Nome; Classe='pendente'; Texto="$Nome ainda não rodou hoje" }
     }
     $hora = ([datetime]$UltimaExecucao).ToString('HH:mm')
+    # 267009 (0x41301, SCHED_S_TASK_RUNNING) nao eh falha: a tarefa so ainda nao terminou
+    # (ciclos DataSync podem levar 35-45+ min). Sem isso, todo ciclo em andamento aparecia
+    # como "falhou" no banner, mesmo quando o outro painel do DataSync mostrava tudo OK.
+    if ($UltimoResultado -eq 267009) {
+        return [pscustomobject]@{ Nome=$Nome; Classe='pendente'; Texto="$Nome ainda está rodando (iniciado às $hora)" }
+    }
     if ($UltimoResultado -eq 0) {
         return [pscustomobject]@{ Nome=$Nome; Classe='ok'; Texto="$Nome concluído às $hora" }
     }

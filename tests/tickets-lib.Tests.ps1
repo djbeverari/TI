@@ -98,6 +98,11 @@ Describe 'Get-StatusCiclo' {
     $r = Get-StatusCiclo -Nome 'DataSync 10:30' -UltimaExecucao $null -UltimoResultado $null -Hoje ([datetime]'2026-07-03 09:00')
     $r.Classe | Should -Be 'pendente'
   }
+  It 'pendente (nao erro) quando ainda esta rodando - codigo 267009' {
+    $r = Get-StatusCiclo -Nome 'DataSync 10:30' -UltimaExecucao ([datetime]'2026-07-03 10:30') -UltimoResultado 267009 -Hoje ([datetime]'2026-07-03 11:30')
+    $r.Classe | Should -Be 'pendente'
+    $r.Texto | Should -Match 'ainda está rodando'
+  }
   It 'erro quando rodou hoje mas resultado diferente de 0' {
     $r = Get-StatusCiclo -Nome 'DataSync 10:30' -UltimaExecucao ([datetime]'2026-07-03 10:31') -UltimoResultado 1 -Hoje ([datetime]'2026-07-03 11:30')
     $r.Classe | Should -Be 'erro'
