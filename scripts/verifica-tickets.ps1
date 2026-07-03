@@ -64,9 +64,23 @@ $resultados = foreach ($loja in $Lojas) {
     }
 }
 
+$ciclos = foreach ($nomeTarefa in 'DataSync_1030', 'DataSync_1430', 'DataSync_1630') {
+    # Consulta best-effort: se o Task Scheduler falhar aqui (ex.: sessao sem
+    # acesso ao WMI de tarefas), o banner de ciclos fica sem essa entrada,
+    # mas a comparacao de tickets (o que importa) nao pode ser derrubada.
+    try {
+        $tarefa = Get-ScheduledTask -TaskName $nomeTarefa -ErrorAction Stop
+        $info   = $tarefa | Get-ScheduledTaskInfo -ErrorAction Stop
+        Get-StatusCiclo -Nome ($nomeTarefa -replace '_', ' ') -UltimaExecucao $info.LastRunTime `
+                        -UltimoResultado $info.LastTaskResult -Hoje $hoje
+    } catch {
+        Write-VerificaLog "Nao foi possivel consultar status de $nomeTarefa`: $($_.Exception.Message)" 'WARN'
+    }
+}
+
 $periodo = (Get-DatasParaVerificar -Referencia $hoje -Feriados @() |
             ForEach-Object { $_.ToString('dd/MM') }) -join ', '
-$html = New-RelatorioHtml -Resultados $resultados -Periodo $periodo -Timestamp $hoje.ToString('yyyy-MM-dd HH:mm')
+$html = New-RelatorioHtml -Resultados $resultados -Periodo $periodo -Timestamp $hoje.ToString('yyyy-MM-dd HH:mm') -Ciclos $ciclos
 if (-not (Test-Path (Split-Path $SaidaHtml))) { New-Item -ItemType Directory -Path (Split-Path $SaidaHtml) -Force | Out-Null }
 Set-Content -Path $SaidaHtml -Value $html -Encoding UTF8
 

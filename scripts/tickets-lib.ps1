@@ -134,10 +134,35 @@ function Get-SyncConcluidoLoja {
 }
 
 # ---------------------------------------------------------------------
+# Status de um ciclo agendado do DataSync (10:30/14:30/16:30), a partir
+# do LastRunTime/LastTaskResult do Task Scheduler. Usado pra avisar o
+# usuario se o painel ja reflete um sync do dia ou ainda esta desatualizado.
+# ---------------------------------------------------------------------
+function Get-StatusCiclo {
+    param(
+        [string]$Nome,
+        $UltimaExecucao,
+        $UltimoResultado,
+        [datetime]$Hoje = (Get-Date)
+    )
+    # $UltimaExecucao/$UltimoResultado ficam sem tipo forte de propósito: um parametro
+    # [Nullable[datetime]] eh desembrulhado pelo PowerShell ao vincular um valor nao-nulo,
+    # perdendo .HasValue/.Value — mais simples tratar $null "na unha".
+    if (-not $UltimaExecucao -or ([datetime]$UltimaExecucao).Date -ne $Hoje.Date) {
+        return [pscustomobject]@{ Nome=$Nome; Classe='pendente'; Texto="$Nome ainda não rodou hoje" }
+    }
+    $hora = ([datetime]$UltimaExecucao).ToString('HH:mm')
+    if ($UltimoResultado -eq 0) {
+        return [pscustomobject]@{ Nome=$Nome; Classe='ok'; Texto="$Nome concluído às $hora" }
+    }
+    return [pscustomobject]@{ Nome=$Nome; Classe='erro'; Texto="$Nome falhou às $hora (código $UltimoResultado)" }
+}
+
+# ---------------------------------------------------------------------
 # Gera o painel HTML.
 # ---------------------------------------------------------------------
 function New-RelatorioHtml {
-    param([object[]]$Resultados, [string]$Periodo, [string]$Timestamp)
+    param([object[]]$Resultados, [string]$Periodo, [string]$Timestamp, [object[]]$Ciclos = @())
     $cont = @{ OK=0; PENDENTE=0; DIVERGENTE=0; ATENCAO=0; SEM_MOVIMENTO=0; ERRO=0 }
     foreach ($r in $Resultados) { $cont[$r.Status]++ }
     $totalLoja = ($Resultados | Measure-Object TicketsLoja -Sum).Sum
@@ -195,12 +220,35 @@ tbody tr:hover{background:#f7f9fd}
 .badge.sem_movimento{background:#8a93a0} .badge.erro{background:#b0142a}
 tr.total td{font-weight:700;background:#eef1fb;border-top:2px solid var(--navy)}
 .footer{margin-top:14px;font-size:11.5px;color:var(--muted);text-align:right}
-</style></head><body>
+.ciclos{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 22px}
+.ciclo{padding:5px 13px;border-radius:16px;font-size:12px;font-weight:600;color:#fff}
+.ciclo.ok{background:#2e9e4d} .ciclo.pendente{background:#8a93a0} .ciclo.erro{background:#b0142a}
+.btn-atualizar{background:var(--gold);color:var(--navy-dark);border:none;padding:8px 20px;
+  border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;text-decoration:none;
+  display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn-atualizar:hover{background:#ffe14d}
+</style>
+<script>
+function confirmarAtualizacao(ev){
+  ev.preventDefault();
+  var btn = ev.currentTarget;
+  btn.textContent = 'Atualizando... (~1 min)';
+  btn.style.pointerEvents = 'none';
+  window.location.href = '/executar-verificacao-tickets';
+}
+</script>
+</head><body>
 <div class='topbar'>
   <div><h1>Verificador de Tickets</h1><div class='sub'>Rede Dorinho's — Loja × Retaguarda</div></div>
-  <div class='meta'>Atualizado: $Timestamp<br>Período verificado: $Periodo</div>
+  <div style='display:flex;align-items:center;gap:16px'>
+    <div class='meta'>Atualizado: $Timestamp<br>Período verificado: $Periodo</div>
+    <a href='/executar-verificacao-tickets' class='btn-atualizar' onclick='confirmarAtualizacao(event)'>&#8635; Atualizar agora</a>
+  </div>
 </div>
 <div class='wrap'>
+$(if ($Ciclos -and $Ciclos.Count -gt 0) {
+"<div class='ciclos'>" + (($Ciclos | ForEach-Object { "<span class='ciclo $($_.Classe)'>$($_.Texto)</span>" }) -join "`n") + "</div>"
+})
 <div class='resumo'>
   <div class='card destaque'><div class='num'>$totalLoja</div><div class='lbl'>Total tickets loja</div></div>
   <div class='card ok'><div class='num'>$($cont.OK)</div><div class='lbl'>OK</div></div>

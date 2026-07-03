@@ -1,4 +1,4 @@
-# Testes Pester da lógica pura do Verificador de Tickets.
+﻿# Testes Pester da lógica pura do Verificador de Tickets.
 # Rodar: Invoke-Pester tests/tickets-lib.Tests.ps1 -Output Detailed
 BeforeAll { . "$PSScriptRoot/../scripts/tickets-lib.ps1" }
 
@@ -80,6 +80,28 @@ Describe 'Get-SyncConcluidoLoja' {
   }
   It 'nao concluido quando arquivo e de outro dia' {
     Get-SyncConcluidoLoja -Loja 3 -StatusDir $dir -Hoje (Get-Date).AddDays(1) | Should -BeFalse
+  }
+}
+
+Describe 'Get-StatusCiclo' {
+  It 'ok quando rodou hoje com resultado 0' {
+    $r = Get-StatusCiclo -Nome 'DataSync 10:30' -UltimaExecucao ([datetime]'2026-07-03 10:31') -UltimoResultado 0 -Hoje ([datetime]'2026-07-03 11:30')
+    $r.Classe | Should -Be 'ok'
+    $r.Texto | Should -Match 'concluído às 10:31'
+  }
+  It 'pendente quando ainda nao rodou hoje (ultima execucao e de outro dia)' {
+    $r = Get-StatusCiclo -Nome 'DataSync 10:30' -UltimaExecucao ([datetime]'2026-07-02 10:31') -UltimoResultado 0 -Hoje ([datetime]'2026-07-03 09:00')
+    $r.Classe | Should -Be 'pendente'
+    $r.Texto | Should -Match 'ainda não rodou hoje'
+  }
+  It 'pendente quando nunca rodou (sem ultima execucao)' {
+    $r = Get-StatusCiclo -Nome 'DataSync 10:30' -UltimaExecucao $null -UltimoResultado $null -Hoje ([datetime]'2026-07-03 09:00')
+    $r.Classe | Should -Be 'pendente'
+  }
+  It 'erro quando rodou hoje mas resultado diferente de 0' {
+    $r = Get-StatusCiclo -Nome 'DataSync 10:30' -UltimaExecucao ([datetime]'2026-07-03 10:31') -UltimoResultado 1 -Hoje ([datetime]'2026-07-03 11:30')
+    $r.Classe | Should -Be 'erro'
+    $r.Texto | Should -Match 'falhou'
   }
 }
 
