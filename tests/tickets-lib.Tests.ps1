@@ -93,9 +93,9 @@ Describe 'New-RelatorioHtml' {
     $script:html = New-RelatorioHtml -Resultados $res -Periodo '2026-07-01' -Timestamp '2026-07-02 11:30'
   }
   It 'contem o resumo com contagens por status' {
-    $html | Should -Match 'OK: 1'
-    $html | Should -Match 'DIVERGENTE: 1'
-    $html | Should -Match 'PENDENTE: 1'
+    $html | Should -Match "(?s)card ok'>.*?'num'>1<"
+    $html | Should -Match "(?s)card divergente'>.*?'num'>1<"
+    $html | Should -Match "(?s)card pendente'>.*?'num'>1<"
   }
   It 'contem uma linha por loja' {
     $html | Should -Match '>3<'; $html | Should -Match '>4<'; $html | Should -Match '>5<'

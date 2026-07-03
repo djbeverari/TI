@@ -1,4 +1,4 @@
-# =====================================================================
+﻿# =====================================================================
 # verifica-tickets.ps1 — Orquestrador do Verificador de Tickets
 # Compara a contagem de tickets de cada loja com a retaguarda e gera o painel.
 # Agendado ~11:30 (após o ciclo DataSync_1030), seg–sex.
@@ -10,7 +10,7 @@ $base = $PSScriptRoot
 
 # --- Caminhos --------------------------------------------------------
 $LogDir        = 'C:\Logs\VerificaTickets'
-$SaidaHtml     = 'C:\WebRelatorios\tickets.html'
+$SaidaHtml     = 'C:\Logs\DataSync\tickets.html'
 $CacheFeriados = Join-Path $base 'feriados_cache.json'
 $CsvMunicipal  = Join-Path $base 'feriados_municipais.csv'
 $StatusDir     = 'C:\Logs\DataSync\status'   # status do datasync (loja_<num>.txt)

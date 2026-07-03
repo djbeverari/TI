@@ -1,4 +1,4 @@
-# =====================================================================
+﻿# =====================================================================
 # lojas-config.ps1 — Configuração de conexão do Verificador de Tickets
 # Gerado a partir do RegSrvr.xml do SSMS (Registered Servers).
 # NÃO comitar senha aqui. A senha do 'sa' é lida de um arquivo protegido.

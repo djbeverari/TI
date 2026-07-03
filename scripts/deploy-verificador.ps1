@@ -1,4 +1,4 @@
-# =====================================================================
+﻿# =====================================================================
 # deploy-verificador.ps1 — Roda da SUA máquina (Daniella).
 # Copia os scripts do verificador pro servidor via PSRemoting, grava as
 # senhas do sa (criptografadas como Datasync, no servidor) e faz o dry-run.
@@ -37,7 +37,7 @@ try {
         Set-Location $dir
         $saida = & powershell -ExecutionPolicy Bypass -File (Join-Path $dir 'verifica-tickets.ps1') *>&1 | Out-String
 
-        $htmlPath = 'C:\WebRelatorios\tickets.html'
+        $htmlPath = 'C:\Logs\DataSync\tickets.html'
         [pscustomobject]@{
             Saida     = $saida
             HtmlExiste= (Test-Path $htmlPath)

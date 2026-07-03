@@ -1,4 +1,4 @@
-# =====================================================================
+﻿# =====================================================================
 # guardar-senha-sql.ps1 — Grava as senhas do sa protegidas por DPAPI.
 # Rode UMA vez (e sempre que a senha mudar). Só o seu usuário descriptografa.
 #   .sql_cred            -> senha compartilhada das 38 lojas
