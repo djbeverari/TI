@@ -60,26 +60,37 @@ Describe 'Get-SyncConcluidoLoja' {
   BeforeAll {
     $script:dir = Join-Path ([IO.Path]::GetTempPath()) ("sync_" + [guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $dir | Out-Null
-    Set-Content (Join-Path $dir 'loja_3.txt')  "ENVIA|OK|16:32"  -Encoding UTF8
-    Set-Content (Join-Path $dir 'loja_31.txt') "RECEBE|ERRO|10:40" -Encoding UTF8
-    Set-Content (Join-Path $dir 'loja_09.txt') "ENVIA|OK|16:35"  -Encoding UTF8  # padded
+    $script:hoje = Get-Date
+    $arqHoje = Join-Path $dir ("sync_{0}.log" -f $hoje.ToString('yyyy-MM-dd'))
+    @"
+[2026-07-03 10:30:03] [INFO] Loja 03: Executando RECEBE...
+[2026-07-03 10:31:20] [SUCCESS] [OK] Loja 03 - RECEBE concluido com sucesso
+[2026-07-03 10:30:04] [INFO] Loja 31: Executando RECEBE...
+[2026-07-03 10:30:05] [ERROR] [ERRO] Loja 31 - RECEBE nao concluido
+[2026-07-03 14:30:04] [SUCCESS] [OK] Loja 09 - RECEBE ja concluido hoje (sync anterior)
+[2026-07-03 15:12:28] [ERROR] [ERRO] Loja 04 - ENVIA: Transferencia nao concluida
+[2026-07-03 10:31:20] [SUCCESS] [OK] Loja 04 - RECEBE concluido com sucesso
+"@ | Set-Content $arqHoje -Encoding UTF8
   }
   AfterAll { Remove-Item $dir -Recurse -Force }
 
-  It 'concluido quando arquivo de hoje tem Status OK' {
-    Get-SyncConcluidoLoja -Loja 3 -StatusDir $dir -Hoje (Get-Date) | Should -BeTrue
+  It 'concluido quando o log de hoje tem sucesso do RECEBE' {
+    Get-SyncConcluidoLoja -Loja 3 -LogDir $dir -Hoje $hoje | Should -BeTrue
   }
-  It 'nao concluido quando Status ERRO' {
-    Get-SyncConcluidoLoja -Loja 31 -StatusDir $dir -Hoje (Get-Date) | Should -BeFalse
+  It 'nao concluido quando RECEBE deu erro' {
+    Get-SyncConcluidoLoja -Loja 31 -LogDir $dir -Hoje $hoje | Should -BeFalse
   }
-  It 'acha arquivo com zero a esquerda (loja_09.txt)' {
-    Get-SyncConcluidoLoja -Loja 9 -StatusDir $dir -Hoje (Get-Date) | Should -BeTrue
+  It 'acha loja com zero a esquerda no log (Loja 09)' {
+    Get-SyncConcluidoLoja -Loja 9 -LogDir $dir -Hoje $hoje | Should -BeTrue
   }
-  It 'nao concluido quando arquivo nao existe' {
-    Get-SyncConcluidoLoja -Loja 99 -StatusDir $dir -Hoje (Get-Date) | Should -BeFalse
+  It 'nao concluido quando arquivo de log nao existe' {
+    Get-SyncConcluidoLoja -Loja 99 -LogDir $dir -Hoje $hoje | Should -BeFalse
   }
-  It 'nao concluido quando arquivo e de outro dia' {
-    Get-SyncConcluidoLoja -Loja 3 -StatusDir $dir -Hoje (Get-Date).AddDays(1) | Should -BeFalse
+  It 'nao concluido quando so existe log de outro dia' {
+    Get-SyncConcluidoLoja -Loja 3 -LogDir $dir -Hoje $hoje.AddDays(1) | Should -BeFalse
+  }
+  It 'concluido pelo RECEBE mesmo com ENVIA falhando depois no mesmo dia (Loja 04)' {
+    Get-SyncConcluidoLoja -Loja 4 -LogDir $dir -Hoje $hoje | Should -BeTrue
   }
 }
 

@@ -13,7 +13,7 @@ $LogDir        = 'C:\Logs\VerificaTickets'
 $SaidaHtml     = 'C:\Logs\DataSync\tickets.html'
 $CacheFeriados = Join-Path $base 'feriados_cache.json'
 $CsvMunicipal  = Join-Path $base 'feriados_municipais.csv'
-$StatusDir     = 'C:\Logs\DataSync\status'   # status do datasync (loja_<num>.txt)
+$DataSyncLogDir = 'C:\Logs\DataSync'   # log diario do datasync (sync_<data>.log) -- ve o RECEBE
 if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Path $LogDir -Force | Out-Null }
 
 function Write-VerificaLog {
@@ -55,7 +55,7 @@ $resultados = foreach ($loja in $Lojas) {
         $erro = $true
         Write-VerificaLog "Loja $($loja.Numero): erro de conexao - $($_.Exception.Message)" 'ERROR'
     }
-    $sync   = Get-SyncConcluidoLoja -Loja $loja.Numero -StatusDir $StatusDir -Hoje $hoje
+    $sync   = Get-SyncConcluidoLoja -Loja $loja.Numero -LogDir $DataSyncLogDir -Hoje $hoje
     $status = Get-TicketStatus -TicketsLoja $tl -TicketsRetaguarda $tr -SyncConcluido $sync -ErroConexao $erro
 
     [pscustomobject]@{

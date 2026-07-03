@@ -116,23 +116,24 @@ function Get-TicketCount {
 }
 
 # ---------------------------------------------------------------------
-# A loja já concluiu o sync de hoje? (lê o status do datasync)
-# Formato gravado pelo data-sync-automacao.ps1 em C:\Logs\DataSync\status:
-#   arquivo loja_<num>.txt  conteúdo "Tipo|Status|Hora" (ex.: ENVIA|OK|16:32)
-# Considera concluído = arquivo de hoje com Status = OK.
+# A loja já concluiu o sync de hoje que importa pro verificador de tickets?
+# O arquivo de status por loja (C:\Logs\DataSync\status\loja_<num>.txt) é
+# SOBRESCRITO a cada fase (RECEBE e depois ENVIA usam o mesmo arquivo) —
+# então se o ENVIA rodar depois do RECEBE (o normal), o arquivo só mostra
+# o resultado do ENVIA, mesmo que o RECEBE (que é quem traz os tickets da
+# loja pra retaguarda) tenha dado certo. Por isso lemos o log diário do
+# DataSync (C:\Logs\DataSync\sync_<data>.log, que só cresce, nunca é
+# sobrescrito) e procuramos a linha de sucesso do RECEBE especificamente.
+# Formato da linha: "[SUCCESS] [OK] Loja 04 - RECEBE concluido com sucesso"
+# (ou "... RECEBE ja concluido hoje (sync anterior)").
 # ---------------------------------------------------------------------
 function Get-SyncConcluidoLoja {
-    param([int]$Loja, [string]$StatusDir, [datetime]$Hoje = (Get-Date))
-    # Tolera nome com e sem zero à esquerda (loja_3.txt / loja_03.txt)
-    $candidatos = @(
-        (Join-Path $StatusDir ("loja_{0}.txt"    -f $Loja)),
-        (Join-Path $StatusDir ("loja_{0:D2}.txt" -f $Loja))
-    ) | Select-Object -Unique
-    foreach ($arquivo in $candidatos) {
-        if (-not (Test-Path $arquivo)) { continue }
-        if ((Get-Item $arquivo).LastWriteTime.Date -ne $Hoje.Date) { continue }
-        $c = Get-Content $arquivo -Raw -Encoding UTF8
-        if ($c -match '^\s*(\w+)\|(\w+)\|') { return ($matches[2] -eq 'OK') }
+    param([int]$Loja, [string]$LogDir, [datetime]$Hoje = (Get-Date))
+    $arquivo = Join-Path $LogDir ("sync_{0}.log" -f $Hoje.ToString('yyyy-MM-dd'))
+    if (-not (Test-Path $arquivo)) { return $false }
+    $padrao = "\[SUCCESS\]\s*\[OK\]\s*Loja\s+0*$Loja\s*-\s*RECEBE"
+    foreach ($linha in (Get-Content $arquivo -Encoding UTF8)) {
+        if ($linha -match $padrao) { return $true }
     }
     return $false
 }
