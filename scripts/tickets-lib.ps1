@@ -249,7 +249,7 @@ function confirmarAtualizacao(ev){
 </script>
 </head><body>
 <div class='topbar'>
-  <div><h1>Verificador de Tickets</h1><div class='sub'>Rede Dorinho's — Loja × Retaguarda</div></div>
+  <div><h1>Verificador de Tickets</h1><div class='sub'>Rede Dorinho's — Loja × Retaguarda &nbsp;|&nbsp; Agente: Nelson</div></div>
   <div style='display:flex;align-items:center;gap:16px'>
     <div class='meta'>Atualizado: $Timestamp<br>Período verificado: $Periodo</div>
     <a href='/executar-verificacao-tickets' class='btn-atualizar' onclick='confirmarAtualizacao(event)'>&#8635; Atualizar agora</a>
