@@ -48,7 +48,7 @@ $resultados = foreach ($loja in $Lojas) {
     $erro = $false; $tl = 0; $tr = 0
     try {
         $tl = Get-TicketCount -Servidor $loja.Servidor -Banco $loja.Banco -Usuario $SqlUser -Senha $pwLojas `
-                              -Datas $datas -ColunaLoja $null -Loja $loja.Numero
+                              -Datas $datas -ColunaLoja $ColunaLojaLocal -Loja $loja.Numero
         $tr = Get-TicketCount -Servidor $Retaguarda.Servidor -Banco $BancoRetaguarda -Usuario $SqlUser -Senha $pwRetaguarda `
                               -Datas $datas -ColunaLoja $ColunaLojaRetaguarda -Loja $loja.Numero
     } catch {

@@ -21,10 +21,14 @@ $PadraoBancoLoja = "Loja{0:D2}"           # {0:D2} = número com 2 dígitos (3 -
 # Nome do banco consolidado na retaguarda (Dorinhos / 192.168.0.55):
 $BancoRetaguarda = "Dorinhos_2022"        # banco consolidado na retaguarda (192.168.0.55)
 
-# --- Coluna que identifica a loja na tabela de tickets da retaguarda --
+# --- Coluna que identifica a loja na tabela de tickets ----------------
+# Filtro defensivo nos DOIS lados (loja e retaguarda), mesmo que o banco de
+# cada loja normalmente so tenha os proprios tickets -- protege contra o
+# caso de algum banco de loja acumular registro de outra filial por engano.
+# (A causa real da divergencia generalizada em 2026-07-03 foi outra: formato
+# de data com traco em Get-TicketCount -- ver memoria do projeto.)
+$ColunaLojaLocal      = "codigo_filial"   # filtro na loja:      WHERE codigo_filial = <numero>
 $ColunaLojaRetaguarda = "codigo_filial"   # filtro na retaguarda: WHERE codigo_filial = <numero>
-# OBS: confirmar no dry-run que codigo_filial usa o MESMO número da loja (3,4,...57)
-#      e não um código interno de filial diferente.
 
 # --- Retaguarda / Matriz ---------------------------------------------
 $Retaguarda = @{ Numero="RETAGUARDA"; Servidor="192.168.0.55"; Banco=$BancoRetaguarda }

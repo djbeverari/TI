@@ -98,7 +98,11 @@ function Get-TicketCount {
         [string]$Servidor, [string]$Banco, [string]$Usuario, [string]$Senha,
         [datetime[]]$Datas, [string]$ColunaLoja, [int]$Loja, [int]$TimeoutSec = 20
     )
-    $inList = ($Datas | ForEach-Object { "'" + $_.ToString('yyyy-MM-dd') + "'" }) -join ','
+    # Formato SEM traco (yyyyMMdd) de proposito: 'yyyy-MM-dd' com traco pode ser
+    # interpretado de forma diferente dependendo do DATEFORMAT/LANGUAGE da conexao/servidor
+    # (risco de trocar dia e mes). 'yyyyMMdd' e sempre interpretado como ano-mes-dia pelo
+    # SQL Server, independente de configuracao regional.
+    $inList = ($Datas | ForEach-Object { "'" + $_.ToString('yyyyMMdd') + "'" }) -join ','
     $where = "data_venda IN ($inList)"
     if ($ColunaLoja) { $where += " AND [$ColunaLoja] = $Loja" }
     $sql = "SELECT COUNT(*) FROM loja_venda WHERE $where"
