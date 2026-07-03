@@ -72,10 +72,18 @@ $Lojas = @(
     @{ Numero=54; Servidor="192.168.15.101\sqlexpress" },
     @{ Numero=55; Servidor="192.168.49.100\sqlexpress" },
     @{ Numero=56; Servidor="192.168.5.100\sqlexpress"  },
-    @{ Numero=57; Servidor="192.168.57.100\sqlexpress" }
+    @{ Numero=57; Servidor="192.168.57.100\sqlexpress" },
+
+    # E-COMMERCE — nao e uma loja fisica, entra no mesmo fluxo do DataSync
+    # (39 "lojas" = 38 fisicas + e-commerce). codigo_filial=995 e banco
+    # confirmados em 2026-07-03: Lojaonline (02/07) = 13 tickets nos dois lados.
+    @{ Numero=995; Servidor="192.168.0.10\sqlexpress"; Banco="Lojaonline"; RotuloLog="E-COMMERCE" }
 )
 
-# Total: 38 lojas. Fonte: RegSrvr.xml (SSMS Registered Servers), 2026-07-02.
+# Total: 38 lojas + E-COMMERCE. Fonte: RegSrvr.xml (SSMS Registered Servers), 2026-07-02.
 
-# Deriva o nome do banco de cada loja (Loja03, Loja04, ...) a partir do número.
-foreach ($l in $Lojas) { $l.Banco = ($PadraoBancoLoja -f [int]$l.Numero) }
+# Deriva o nome do banco de cada loja (Loja03, Loja04, ...) a partir do número,
+# exceto entradas que ja tem Banco definido explicitamente (ex.: E-COMMERCE).
+foreach ($l in $Lojas) {
+    if (-not $l.ContainsKey('Banco')) { $l.Banco = ($PadraoBancoLoja -f [int]$l.Numero) }
+}

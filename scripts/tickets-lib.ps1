@@ -125,13 +125,16 @@ function Get-TicketCount {
 # DataSync (C:\Logs\DataSync\sync_<data>.log, que só cresce, nunca é
 # sobrescrito) e procuramos a linha de sucesso do RECEBE especificamente.
 # Formato da linha: "[SUCCESS] [OK] Loja 04 - RECEBE concluido com sucesso"
-# (ou "... RECEBE ja concluido hoje (sync anterior)").
+# (ou "... RECEBE ja concluido hoje (sync anterior)"). O E-COMMERCE aparece no
+# log como "Loja E-COMMERCE", nao pelo codigo_filial 995 -- por isso o parametro
+# -Rotulo, que sobrescreve o texto usado na busca (default = numero da loja).
 # ---------------------------------------------------------------------
 function Get-SyncConcluidoLoja {
-    param([int]$Loja, [string]$LogDir, [datetime]$Hoje = (Get-Date))
+    param([int]$Loja, [string]$LogDir, [datetime]$Hoje = (Get-Date), [string]$Rotulo)
+    if (-not $Rotulo) { $Rotulo = "$Loja" }
     $arquivo = Join-Path $LogDir ("sync_{0}.log" -f $Hoje.ToString('yyyy-MM-dd'))
     if (-not (Test-Path $arquivo)) { return $false }
-    $padrao = "\[SUCCESS\]\s*\[OK\]\s*Loja\s+0*$Loja\s*-\s*RECEBE"
+    $padrao = "\[SUCCESS\]\s*\[OK\]\s*Loja\s+0*$Rotulo\s*-\s*RECEBE"
     foreach ($linha in (Get-Content $arquivo -Encoding UTF8)) {
         if ($linha -match $padrao) { return $true }
     }
@@ -189,7 +192,9 @@ function New-RelatorioHtml {
     $linhas = foreach ($r in $Resultados) {
         $cls = $r.Status.ToLower()
         $sync = if ($r.SyncConcluido) { 'sim' } else { 'não' }
-        "<tr class='$cls'><td>$($r.Loja)</td><td>$($r.TicketsLoja)</td><td>$($r.TicketsRetaguarda)</td><td>$($r.Diferenca)</td><td>$sync</td><td><span class='badge $cls'>$($rotulos[$r.Status])</span></td></tr>"
+        # codigo_filial 995 = E-COMMERCE (nao e uma loja fisica numerada)
+        $rotuloLoja = if ($r.Loja -eq 995) { 'E-COMMERCE' } else { $r.Loja }
+        "<tr class='$cls'><td>$rotuloLoja</td><td>$($r.TicketsLoja)</td><td>$($r.TicketsRetaguarda)</td><td>$($r.Diferenca)</td><td>$sync</td><td><span class='badge $cls'>$($rotulos[$r.Status])</span></td></tr>"
     }
 
     @"

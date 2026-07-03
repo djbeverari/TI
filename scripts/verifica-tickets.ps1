@@ -55,7 +55,8 @@ $resultados = foreach ($loja in $Lojas) {
         $erro = $true
         Write-VerificaLog "Loja $($loja.Numero): erro de conexao - $($_.Exception.Message)" 'ERROR'
     }
-    $sync   = Get-SyncConcluidoLoja -Loja $loja.Numero -LogDir $DataSyncLogDir -Hoje $hoje
+    $rotuloLog = if ($loja.ContainsKey('RotuloLog')) { $loja.RotuloLog } else { $null }
+    $sync   = Get-SyncConcluidoLoja -Loja $loja.Numero -LogDir $DataSyncLogDir -Hoje $hoje -Rotulo $rotuloLog
     $status = Get-TicketStatus -TicketsLoja $tl -TicketsRetaguarda $tr -SyncConcluido $sync -ErroConexao $erro
 
     [pscustomobject]@{

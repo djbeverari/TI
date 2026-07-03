@@ -70,6 +70,7 @@ Describe 'Get-SyncConcluidoLoja' {
 [2026-07-03 14:30:04] [SUCCESS] [OK] Loja 09 - RECEBE ja concluido hoje (sync anterior)
 [2026-07-03 15:12:28] [ERROR] [ERRO] Loja 04 - ENVIA: Transferencia nao concluida
 [2026-07-03 10:31:20] [SUCCESS] [OK] Loja 04 - RECEBE concluido com sucesso
+[2026-07-03 10:32:00] [SUCCESS] [OK] Loja E-COMMERCE - RECEBE concluido com sucesso
 "@ | Set-Content $arqHoje -Encoding UTF8
   }
   AfterAll { Remove-Item $dir -Recurse -Force }
@@ -91,6 +92,10 @@ Describe 'Get-SyncConcluidoLoja' {
   }
   It 'concluido pelo RECEBE mesmo com ENVIA falhando depois no mesmo dia (Loja 04)' {
     Get-SyncConcluidoLoja -Loja 4 -LogDir $dir -Hoje $hoje | Should -BeTrue
+  }
+  It 'usa -Rotulo pra achar o E-COMMERCE no log (nao aparece pelo codigo_filial 995)' {
+    Get-SyncConcluidoLoja -Loja 995 -LogDir $dir -Hoje $hoje -Rotulo 'E-COMMERCE' | Should -BeTrue
+    Get-SyncConcluidoLoja -Loja 995 -LogDir $dir -Hoje $hoje | Should -BeFalse
   }
 }
 
@@ -144,5 +149,11 @@ Describe 'New-RelatorioHtml' {
   }
   It 'tem linha de total geral' {
     $html | Should -Match 'TOTAL GERAL'
+  }
+  It 'mostra E-COMMERCE em vez de 995 na coluna Loja' {
+    $resEcom = @([pscustomobject]@{ Loja=995; TicketsLoja=13; TicketsRetaguarda=13; Diferenca=0; SyncConcluido=$true; Status='OK' })
+    $htmlEcom = New-RelatorioHtml -Resultados $resEcom -Periodo '2026-07-02' -Timestamp '2026-07-03 11:30'
+    $htmlEcom | Should -Match '>E-COMMERCE<'
+    $htmlEcom | Should -Not -Match '>995<'
   }
 }
