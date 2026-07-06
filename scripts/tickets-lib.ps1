@@ -235,6 +235,9 @@ tbody tr:hover{background:#f7f9fd}
 .badge.divergente{background:var(--red)} .badge.atencao{background:#e8791a}
 .badge.sem_movimento{background:#8a93a0} .badge.erro{background:#b0142a}
 tr.total td{font-weight:700;background:#eef1fb;border-top:2px solid var(--navy)}
+.legenda{display:flex;flex-wrap:wrap;gap:14px;margin-top:16px;padding:14px 18px;
+  background:var(--card);border-radius:10px;box-shadow:0 2px 6px rgba(15,30,60,.08)}
+.legenda-item{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text)}
 .footer{margin-top:14px;font-size:11.5px;color:var(--muted);text-align:right}
 .ciclos{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 22px}
 .ciclo{padding:5px 13px;border-radius:16px;font-size:12px;font-weight:600;color:#fff}
@@ -281,6 +284,14 @@ $(if ($Ciclos -and $Ciclos.Count -gt 0) {
 $($linhas -join "`n")
 <tr class='total'><td>TOTAL GERAL</td><td>$totalLoja</td><td>$totalReta</td><td>$($totalLoja - $totalReta)</td><td></td><td></td></tr>
 </tbody></table>
+</div>
+<div class='legenda'>
+  <div class='legenda-item'><span class='badge ok'>OK</span> Retaguarda = Loja</div>
+  <div class='legenda-item'><span class='badge pendente'>PENDENTE</span> Faltou ticket, mas o sync (RECEBE) de hoje ainda não terminou</div>
+  <div class='legenda-item'><span class='badge divergente'>DIVERGENTE</span> Sync já concluiu e ainda faltou ticket na retaguarda</div>
+  <div class='legenda-item'><span class='badge atencao'>ATENÇÃO</span> Retaguarda tem mais tickets que a loja (situação invertida)</div>
+  <div class='legenda-item'><span class='badge sem_movimento'>SEM MOVIMENTO</span> Loja e retaguarda zeradas (sem vendas no período)</div>
+  <div class='legenda-item'><span class='badge erro'>ERRO</span> Não deu pra conectar no banco da loja ou da retaguarda</div>
 </div>
 <div class='footer'>Atualização automática a cada 5 min</div>
 </div>
