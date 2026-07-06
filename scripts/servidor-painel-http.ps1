@@ -65,31 +65,64 @@ while ($listener.IsListening) {
             $urlPath = 'painel.html'
         }
 
+        if ($urlPath -eq 'verificacao-timestamp') {
+            $arqTickets = Join-Path $PastaLogs 'tickets.html'
+            $ts = if (Test-Path $arqTickets) { (Get-Item $arqTickets).LastWriteTimeUtc.ToString('o') } else { '' }
+            $bytes = [System.Text.Encoding]::UTF8.GetBytes($ts)
+            $response.StatusCode = 200
+            $response.ContentType = 'text/plain; charset=utf-8'
+            $response.ContentLength64 = $bytes.Length
+            $response.OutputStream.Write($bytes, 0, $bytes.Length)
+            $response.Close()
+            continue
+        }
+
         if ($urlPath -eq 'executar-verificacao-tickets') {
+            $arqTickets = Join-Path $PastaLogs 'tickets.html'
+            $tsAntes = if (Test-Path $arqTickets) { (Get-Item $arqTickets).LastWriteTimeUtc.ToString('o') } else { '' }
             try {
                 Start-ScheduledTask -TaskName 'VerificaTickets' -ErrorAction Stop
-                $msg = 'Verificação disparada. Isso leva cerca de 1 minuto.'
+                $msg = 'Verificação disparada.'
                 Write-Host "$(Get-Date -Format 'HH:mm:ss') GET /$urlPath -> 200 (gatilho VerificaTickets)" -ForegroundColor Cyan
             } catch {
                 $msg = "Não foi possível iniciar a verificação: $($_.Exception.Message)"
                 Write-Host "$(Get-Date -Format 'HH:mm:ss') GET /$urlPath -> erro ao disparar tarefa: $_" -ForegroundColor Red
             }
+            # Espera ativa via JS: consulta /verificacao-timestamp ate o tickets.html mudar
+            # de verdade, em vez de um tempo fixo -- de manha cedo (antes do ciclo das 10:30)
+            # varias lojas ainda estao offline e cada erro de conexao leva ~20s, entao a
+            # verificacao pode passar bem de 1 minuto.
             $html = @"
 <!doctype html><html lang='pt-br'><head><meta charset='utf-8'>
-<meta http-equiv='refresh' content='75;url=/tickets.html'><title>Atualizando...</title>
+<title>Atualizando...</title>
 <style>
 body{font-family:'Segoe UI',Arial,sans-serif;background:#0033A0;color:#fff;margin:0;
   height:100vh;display:flex;align-items:center;justify-content:center}
 .box{background:#022266;padding:32px 44px;border-radius:10px;border-top:4px solid #FFD700;
-  text-align:center;max-width:420px}
+  text-align:center;max-width:440px}
 a{color:#FFD700}
+#aviso{display:none;margin-top:10px;font-size:13px;color:#cfd8f5}
 </style></head><body>
 <div class='box'>
   <h2>Atualizando verificação de tickets…</h2>
   <p>$msg</p>
-  <p>Você será redirecionado automaticamente pro painel.</p>
+  <p id='status'>Aguardando conclusão (isso leva ~1 min, mas pode demorar mais de manhã cedo, com lojas ainda offline)…</p>
+  <p id='aviso'>Ainda rodando — normal se muitas lojas ainda não abriram ou o ciclo das 10:30 ainda não passou.</p>
   <p><a href='/tickets.html'>Ir para o painel agora</a></p>
 </div>
+<script>
+var tsAntes = '$tsAntes';
+var tentativas = 0;
+function checar(){
+  tentativas++;
+  if (tentativas === 12) { document.getElementById('aviso').style.display = 'block'; }
+  fetch('/verificacao-timestamp').then(function(r){ return r.text(); }).then(function(ts){
+    if (ts && ts !== tsAntes) { window.location.href = '/tickets.html'; }
+    else { setTimeout(checar, 5000); }
+  }).catch(function(){ setTimeout(checar, 5000); });
+}
+setTimeout(checar, 5000);
+</script>
 </body></html>
 "@
             Send-HtmlResponse -Response $response -Html $html
