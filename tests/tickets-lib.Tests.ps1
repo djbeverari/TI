@@ -150,6 +150,12 @@ Describe 'New-RelatorioHtml' {
   It 'tem linha de total geral' {
     $html | Should -Match 'TOTAL GERAL'
   }
+  It 'mostra tracinho em vez de 0 quando Status e ERRO (nao contou de verdade)' {
+    $resErro = @([pscustomobject]@{ Loja=17; TicketsLoja=0; TicketsRetaguarda=0; Diferenca=0; SyncConcluido=$true; Status='ERRO' })
+    $htmlErro = New-RelatorioHtml -Resultados $resErro -Periodo '2026-07-06' -Timestamp '2026-07-06 15:04'
+    $htmlErro | Should -Match "<td>17</td><td>—</td><td>—</td><td>—</td>"
+    $htmlErro | Should -Not -Match "<td>17</td><td>0</td>"
+  }
   It 'mostra E-COMMERCE em vez de 995 na coluna Loja' {
     $resEcom = @([pscustomobject]@{ Loja=995; TicketsLoja=13; TicketsRetaguarda=13; Diferenca=0; SyncConcluido=$true; Status='OK' })
     $htmlEcom = New-RelatorioHtml -Resultados $resEcom -Periodo '2026-07-02' -Timestamp '2026-07-03 11:30'

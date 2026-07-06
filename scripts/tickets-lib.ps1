@@ -194,7 +194,13 @@ function New-RelatorioHtml {
         $sync = if ($r.SyncConcluido) { 'sim' } else { 'não' }
         # codigo_filial 995 = E-COMMERCE (nao e uma loja fisica numerada)
         $rotuloLoja = if ($r.Loja -eq 995) { 'E-COMMERCE' } else { $r.Loja }
-        "<tr class='$cls'><td>$rotuloLoja</td><td>$($r.TicketsLoja)</td><td>$($r.TicketsRetaguarda)</td><td>$($r.Diferenca)</td><td>$sync</td><td><span class='badge $cls'>$($rotulos[$r.Status])</span></td></tr>"
+        # ERRO = nao deu pra conectar, os 0's sao so valor inicial (nunca foram
+        # contados de verdade) -- mostrar "—" evita parecer que a loja zerou vendas.
+        if ($r.Status -eq 'ERRO') {
+            "<tr class='$cls'><td>$rotuloLoja</td><td>—</td><td>—</td><td>—</td><td>$sync</td><td><span class='badge $cls'>$($rotulos[$r.Status])</span></td></tr>"
+        } else {
+            "<tr class='$cls'><td>$rotuloLoja</td><td>$($r.TicketsLoja)</td><td>$($r.TicketsRetaguarda)</td><td>$($r.Diferenca)</td><td>$sync</td><td><span class='badge $cls'>$($rotulos[$r.Status])</span></td></tr>"
+        }
     }
 
     @"
