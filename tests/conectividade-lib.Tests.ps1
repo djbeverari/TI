@@ -35,3 +35,34 @@ Describe 'Get-LojaRotulo' {
         Get-LojaRotulo -Loja @{ Numero = 3 } | Should -Be '3'
     }
 }
+
+Describe 'Get-LojasParaTeste' {
+    BeforeAll {
+        $lojas = @(
+            @{ Numero = 3; Servidor = '192.168.3.100\sqlexpress' },
+            @{ Numero = 4; Servidor = '192.168.4.101\sqlexpress' },
+            @{ Numero = 995; Servidor = '192.168.0.10\sqlexpress'; Banco = 'Lojaonline'; RotuloLog = 'E-COMMERCE' }
+        )
+    }
+
+    It 'gera Roteador + Maquina para loja normal' {
+        $alvos = Get-LojasParaTeste -Lojas $lojas -SemRoteador @('E-COMMERCE')
+        $daLoja3 = $alvos | Where-Object { $_.Loja -eq '3' }
+        $daLoja3.Count | Should -Be 2
+        ($daLoja3 | Where-Object Tipo -eq 'Roteador').Ip | Should -Be '192.168.3.10'
+        ($daLoja3 | Where-Object Tipo -eq 'Maquina').Ip | Should -Be '192.168.3.100'
+    }
+
+    It 'gera só Maquina para lojas em SemRoteador (identificadas por RotuloLog)' {
+        $alvos = Get-LojasParaTeste -Lojas $lojas -SemRoteador @('E-COMMERCE')
+        $doEcommerce = @($alvos | Where-Object { $_.Loja -eq 'E-COMMERCE' })
+        $doEcommerce.Count | Should -Be 1
+        $doEcommerce[0].Tipo | Should -Be 'Maquina'
+        $doEcommerce[0].Ip | Should -Be '192.168.0.10'
+    }
+
+    It 'total de alvos é 2 por loja normal + 1 para SemRoteador' {
+        $alvos = Get-LojasParaTeste -Lojas $lojas -SemRoteador @('E-COMMERCE')
+        $alvos.Count | Should -Be 5
+    }
+}

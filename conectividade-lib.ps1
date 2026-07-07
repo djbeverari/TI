@@ -20,3 +20,32 @@ function Get-LojaRotulo {
     }
     return [string]$Loja.Numero
 }
+
+# --- Composição de alvos ---
+
+function Get-LojasParaTeste {
+    param(
+        [Parameter(Mandatory)] [array]$Lojas,
+        [string[]]$SemRoteador = @('E-COMMERCE')
+    )
+
+    $alvos = @()
+    foreach ($loja in $Lojas) {
+        $rotulo = Get-LojaRotulo -Loja $loja
+        $ip = Get-LojaIp -Servidor $loja.Servidor
+
+        if ($rotulo -notin $SemRoteador) {
+            $alvos += [PSCustomObject]@{
+                Loja = $rotulo
+                Tipo = 'Roteador'
+                Ip   = Get-RouterIp -MachineIp $ip
+            }
+        }
+        $alvos += [PSCustomObject]@{
+            Loja = $rotulo
+            Tipo = 'Maquina'
+            Ip   = $ip
+        }
+    }
+    return $alvos
+}
