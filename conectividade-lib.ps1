@@ -168,3 +168,36 @@ function Invoke-CicloConectividade {
 
     return $linhas
 }
+
+# --- Histórico CSV ---
+
+function Add-HistoricoConectividade {
+    param(
+        [Parameter(Mandatory)] [AllowEmptyCollection()] [array]$Linhas,
+        [Parameter(Mandatory)] [string]$LogDir,
+        [datetime]$Data = (Get-Date)
+    )
+
+    if ($Linhas.Count -eq 0) {
+        return
+    }
+
+    if (-not (Test-Path $LogDir)) {
+        New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
+    }
+    $arquivo = Join-Path $LogDir ("conectividade_{0}.csv" -f $Data.ToString('yyyy-MM-dd'))
+    $Linhas | Export-Csv -Path $arquivo -NoTypeInformation -Append -Encoding UTF8
+}
+
+function Get-HistoricoDia {
+    param(
+        [Parameter(Mandatory)] [string]$LogDir,
+        [datetime]$Data = (Get-Date)
+    )
+
+    $arquivo = Join-Path $LogDir ("conectividade_{0}.csv" -f $Data.ToString('yyyy-MM-dd'))
+    if (-not (Test-Path $arquivo)) {
+        return @()
+    }
+    return @(Import-Csv -Path $arquivo -Encoding UTF8)
+}

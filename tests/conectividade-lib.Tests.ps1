@@ -131,3 +131,38 @@ Describe 'Invoke-CicloConectividade' {
         $linhas.Count | Should -Be 0
     }
 }
+
+Describe 'Add-HistoricoConectividade e Get-HistoricoDia' {
+    It 'grava e lê de volta as linhas do dia' {
+        $logDir = Join-Path $TestDrive 'logs'
+        $data = Get-Date '2026-07-07'
+
+        $linhas1 = @(
+            [PSCustomObject]@{ Timestamp = '2026-07-07T08:00:00'; Loja = '3'; Tipo = 'Roteador'; Ip = '192.168.3.10'; Respondeu = $true; LatenciaMs = 12 }
+        )
+        $linhas2 = @(
+            [PSCustomObject]@{ Timestamp = '2026-07-07T08:05:00'; Loja = '3'; Tipo = 'Roteador'; Ip = '192.168.3.10'; Respondeu = $false; LatenciaMs = $null }
+        )
+
+        Add-HistoricoConectividade -Linhas $linhas1 -LogDir $logDir -Data $data
+        Add-HistoricoConectividade -Linhas $linhas2 -LogDir $logDir -Data $data
+
+        $historico = Get-HistoricoDia -LogDir $logDir -Data $data
+        $historico.Count | Should -Be 2
+        $historico[0].Loja | Should -Be '3'
+    }
+
+    It 'retorna array vazio se o arquivo do dia não existe' {
+        $logDir = Join-Path $TestDrive 'logs-vazio'
+        (Get-HistoricoDia -LogDir $logDir -Data (Get-Date '2026-01-01')).Count | Should -Be 0
+    }
+
+    It 'não cria arquivo nem lança erro quando Linhas está vazio' {
+        $logDir = Join-Path $TestDrive 'logs-noop'
+        $data = Get-Date '2026-07-07'
+
+        { Add-HistoricoConectividade -Linhas @() -LogDir $logDir -Data $data } | Should -Not -Throw
+
+        (Get-HistoricoDia -LogDir $logDir -Data $data).Count | Should -Be 0
+    }
+}
