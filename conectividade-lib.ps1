@@ -397,6 +397,7 @@ function New-PainelHtml {
 <body>
 <header>
   <h1>Conectividade das Lojas</h1>
+  <p>Monitorado por Nádia</p>
   <p>Última atualização: $atualizacao</p>
   <p><a href="ranking.html">Ver ranking de instabilidade →</a></p>
 </header>
