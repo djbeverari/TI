@@ -2,7 +2,9 @@
     [string]$LibPath = "$PSScriptRoot\conectividade-lib.ps1",
     [string]$ConfigPath = "$PSScriptRoot\scripts\lojas-config.ps1",
     [string]$LogDir = 'C:\Logs\Conectividade',
-    [string]$OutputPath = 'C:\WebConectividade\conectividade.html'
+    [string]$OutputPath = 'C:\WebConectividade\conectividade.html',
+    [string]$RankingOutputPath = 'C:\WebConectividade\ranking.html',
+    [int]$RankingDias = 7
 )
 
 $ErrorActionPreference = 'Stop'
@@ -40,4 +42,17 @@ try {
 } catch {
     Write-LogExecucao "ERRO no ciclo: $($_.Exception.Message)"
     exit 1
+}
+
+try {
+    $historicoPeriodo = Get-HistoricoPeriodo -LogDir $LogDir -Dias $RankingDias
+    $rankingRoteador = Get-RankingInstabilidade -Historico $historicoPeriodo -Tipo 'Roteador' -Top 10
+    $rankingMaquina = Get-RankingInstabilidade -Historico $historicoPeriodo -Tipo 'Maquina' -Top 10
+    $rankingLatencia = Get-RankingLatencia -Historico $historicoPeriodo -Top 10
+
+    New-RankingHtml -RankingRoteador $rankingRoteador -RankingMaquina $rankingMaquina -RankingLatencia $rankingLatencia -Dias $RankingDias -OutputPath $RankingOutputPath
+
+    Write-LogExecucao "Ranking atualizado ($RankingDias dias de histórico)"
+} catch {
+    Write-LogExecucao "AVISO: falha ao gerar ranking.html (painel principal já atualizado): $($_.Exception.Message)"
 }
