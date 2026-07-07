@@ -305,3 +305,32 @@ Describe 'Get-RankingInstabilidade' {
         $ranking[0].Loja | Should -Be '3'
     }
 }
+
+Describe 'Get-RankingLatencia' {
+    It 'calcula latência média combinando Roteador e Máquina, ordenado do mais lento pro mais rápido' {
+        $historico = @(
+            [PSCustomObject]@{ Loja = '3'; Tipo = 'Roteador'; Respondeu = 'True'; LatenciaMs = '100' },
+            [PSCustomObject]@{ Loja = '3'; Tipo = 'Maquina'; Respondeu = 'True'; LatenciaMs = '200' },
+            [PSCustomObject]@{ Loja = '4'; Tipo = 'Roteador'; Respondeu = 'True'; LatenciaMs = '10' },
+            [PSCustomObject]@{ Loja = '4'; Tipo = 'Maquina'; Respondeu = 'False'; LatenciaMs = '' }
+        )
+
+        $ranking = Get-RankingLatencia -Historico $historico -Top 10
+
+        $ranking.Count | Should -Be 2
+        $ranking[0].Loja | Should -Be '3'
+        $ranking[0].LatenciaMediaMs | Should -Be 150
+        $ranking[1].Loja | Should -Be '4'
+        $ranking[1].LatenciaMediaMs | Should -Be 10
+    }
+
+    It 'respeita o parâmetro Top' {
+        $historico = @(
+            [PSCustomObject]@{ Loja = '3'; Tipo = 'Roteador'; Respondeu = 'True'; LatenciaMs = '100' },
+            [PSCustomObject]@{ Loja = '4'; Tipo = 'Roteador'; Respondeu = 'True'; LatenciaMs = '10' }
+        )
+        $ranking = Get-RankingLatencia -Historico $historico -Top 1
+        $ranking.Count | Should -Be 1
+        $ranking[0].Loja | Should -Be '3'
+    }
+}

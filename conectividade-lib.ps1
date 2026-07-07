@@ -493,3 +493,24 @@ function Get-RankingInstabilidade {
 
     return ,@($ranking | Sort-Object PctQueda -Descending | Select-Object -First $Top)
 }
+
+function Get-RankingLatencia {
+    param(
+        [Parameter(Mandatory)] [AllowEmptyCollection()] [array]$Historico,
+        [int]$Top = 10
+    )
+
+    $porLoja = @($Historico | Where-Object { $_.Respondeu -eq 'True' -and $_.LatenciaMs -ne '' } | Group-Object Loja)
+
+    $ranking = foreach ($grupo in $porLoja) {
+        $latencias = $grupo.Group | ForEach-Object { [double]$_.LatenciaMs }
+        $media = [math]::Round(($latencias | Measure-Object -Average).Average)
+
+        [PSCustomObject]@{
+            Loja            = $grupo.Name
+            LatenciaMediaMs = $media
+        }
+    }
+
+    return ,@($ranking | Sort-Object LatenciaMediaMs -Descending | Select-Object -First $Top)
+}
