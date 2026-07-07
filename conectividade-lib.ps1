@@ -49,3 +49,34 @@ function Get-LojasParaTeste {
     }
     return $alvos
 }
+
+# --- Verificação de conectividade ---
+
+function Test-IpsParalelo {
+    param(
+        [string[]]$Ips = @(),
+        [int]$TimeoutMs = 2000
+    )
+
+    $resultados = @{}
+    if ($Ips.Count -eq 0) {
+        return $resultados
+    }
+
+    $tarefas = @{}
+    foreach ($ip in $Ips) {
+        $ping = [System.Net.NetworkInformation.Ping]::new()
+        $tarefas[$ip] = $ping.SendPingAsync($ip, $TimeoutMs)
+    }
+    [System.Threading.Tasks.Task]::WaitAll(@($tarefas.Values))
+
+    foreach ($ip in $Ips) {
+        $reply = $tarefas[$ip].Result
+        $sucesso = $reply.Status -eq [System.Net.NetworkInformation.IPStatus]::Success
+        $resultados[$ip] = [PSCustomObject]@{
+            Respondeu  = $sucesso
+            LatenciaMs = if ($sucesso) { $reply.RoundtripTime } else { $null }
+        }
+    }
+    return $resultados
+}

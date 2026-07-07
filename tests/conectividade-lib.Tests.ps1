@@ -66,3 +66,20 @@ Describe 'Get-LojasParaTeste' {
         $alvos.Count | Should -Be 5
     }
 }
+
+Describe 'Test-IpsParalelo' {
+    It 'reporta sucesso para localhost e falha para IP não roteável' {
+        $resultados = Test-IpsParalelo -Ips @('127.0.0.1', '198.51.100.1') -TimeoutMs 1000
+
+        $resultados['127.0.0.1'].Respondeu | Should -Be $true
+        $resultados['127.0.0.1'].LatenciaMs | Should -BeGreaterOrEqual 0
+
+        $resultados['198.51.100.1'].Respondeu | Should -Be $false
+        $resultados['198.51.100.1'].LatenciaMs | Should -Be $null
+    }
+
+    It 'retorna hashtable vazia para lista vazia' {
+        Test-IpsParalelo -Ips @() | Should -BeOfType [hashtable]
+        (Test-IpsParalelo -Ips @()).Count | Should -Be 0
+    }
+}
