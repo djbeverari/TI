@@ -82,4 +82,12 @@ Describe 'Test-IpsParalelo' {
         Test-IpsParalelo -Ips @() | Should -BeOfType [hashtable]
         (Test-IpsParalelo -Ips @()).Count | Should -Be 0
     }
+
+    It 'não derruba o ciclo inteiro quando uma tarefa individual falha (IP malformado)' {
+        $resultados = Test-IpsParalelo -Ips @('127.0.0.1', 'nao-e-um-ip-valido') -TimeoutMs 1000
+
+        $resultados['127.0.0.1'].Respondeu | Should -Be $true
+        $resultados['nao-e-um-ip-valido'].Respondeu | Should -Be $false
+        $resultados['nao-e-um-ip-valido'].LatenciaMs | Should -Be $null
+    }
 }

@@ -63,20 +63,38 @@ function Test-IpsParalelo {
         return $resultados
     }
 
+    $pings = @{}
     $tarefas = @{}
     foreach ($ip in $Ips) {
         $ping = [System.Net.NetworkInformation.Ping]::new()
+        $pings[$ip] = $ping
         $tarefas[$ip] = $ping.SendPingAsync($ip, $TimeoutMs)
     }
-    [System.Threading.Tasks.Task]::WaitAll(@($tarefas.Values))
+
+    try {
+        [System.Threading.Tasks.Task]::WaitAll(@($tarefas.Values)) | Out-Null
+    } catch [System.AggregateException] {
+        # Uma tarefa com falha (ex.: IP malformado) faz WaitAll relançar; os resultados
+        # individuais ainda são lidos abaixo via .IsFaulted, então a falha de um IP não
+        # derruba o ciclo inteiro.
+    }
 
     foreach ($ip in $Ips) {
-        $reply = $tarefas[$ip].Result
-        $sucesso = $reply.Status -eq [System.Net.NetworkInformation.IPStatus]::Success
-        $resultados[$ip] = [PSCustomObject]@{
-            Respondeu  = $sucesso
-            LatenciaMs = if ($sucesso) { $reply.RoundtripTime } else { $null }
+        $tarefa = $tarefas[$ip]
+        if ($tarefa.IsFaulted) {
+            $resultados[$ip] = [PSCustomObject]@{
+                Respondeu  = $false
+                LatenciaMs = $null
+            }
+        } else {
+            $reply = $tarefa.Result
+            $sucesso = $reply.Status -eq [System.Net.NetworkInformation.IPStatus]::Success
+            $resultados[$ip] = [PSCustomObject]@{
+                Respondeu  = $sucesso
+                LatenciaMs = if ($sucesso) { $reply.RoundtripTime } else { $null }
+            }
         }
+        $pings[$ip].Dispose()
     }
     return $resultados
 }
