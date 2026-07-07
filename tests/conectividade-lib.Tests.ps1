@@ -91,3 +91,37 @@ Describe 'Test-IpsParalelo' {
         $resultados['nao-e-um-ip-valido'].LatenciaMs | Should -Be $null
     }
 }
+
+Describe 'Invoke-CicloConectividade' {
+    BeforeAll {
+        $lojas = @(
+            @{ Numero = 3; Servidor = '192.168.3.100\sqlexpress' },   # roteador vai responder
+            @{ Numero = 4; Servidor = '192.168.4.101\sqlexpress' },   # roteador vai falhar
+            @{ Numero = 995; Servidor = '192.168.0.10\sqlexpress'; Banco = 'Lojaonline'; RotuloLog = 'E-COMMERCE' }
+        )
+    }
+
+    It 'testa roteador+máquina quando roteador responde, e marca máquina N/A quando roteador falha' {
+        Mock Test-IpsParalelo {
+            param($Ips, $TimeoutMs)
+            $r = @{}
+            foreach ($ip in $Ips) {
+                $r[$ip] = [PSCustomObject]@{
+                    Respondeu  = ($ip -ne '192.168.4.10')
+                    LatenciaMs = if ($ip -ne '192.168.4.10') { 15 } else { $null }
+                }
+            }
+            return $r
+        }
+
+        $linhas = Invoke-CicloConectividade -Lojas $lojas -SemRoteador @('E-COMMERCE')
+
+        ($linhas | Where-Object { $_.Loja -eq '3' -and $_.Tipo -eq 'Roteador' }).Respondeu | Should -Be $true
+        ($linhas | Where-Object { $_.Loja -eq '3' -and $_.Tipo -eq 'Maquina' }).Respondeu | Should -Be $true
+
+        ($linhas | Where-Object { $_.Loja -eq '4' -and $_.Tipo -eq 'Roteador' }).Respondeu | Should -Be $false
+        ($linhas | Where-Object { $_.Loja -eq '4' -and $_.Tipo -eq 'Maquina' }).Respondeu | Should -BeNullOrEmpty
+
+        ($linhas | Where-Object { $_.Loja -eq 'E-COMMERCE' }).Tipo | Should -Be 'Maquina'
+    }
+}

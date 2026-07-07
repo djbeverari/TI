@@ -98,3 +98,71 @@ function Test-IpsParalelo {
     }
     return $resultados
 }
+
+# --- Orquestração do ciclo ---
+
+function Invoke-CicloConectividade {
+    param(
+        [Parameter(Mandatory)] [array]$Lojas,
+        [string[]]$SemRoteador = @('E-COMMERCE'),
+        [int]$TimeoutMs = 2000
+    )
+
+    $alvos = Get-LojasParaTeste -Lojas $Lojas -SemRoteador $SemRoteador
+    $timestamp = (Get-Date).ToString('o')
+    $linhas = @()
+
+    $roteadorAlvos = @($alvos | Where-Object { $_.Tipo -eq 'Roteador' })
+    $ipsRoteador = @($roteadorAlvos | ForEach-Object { $_.Ip })
+    $resultadosRoteador = Test-IpsParalelo -Ips $ipsRoteador -TimeoutMs $TimeoutMs
+
+    $lojasRoteadorOk = @{}
+    foreach ($alvo in $roteadorAlvos) {
+        $r = $resultadosRoteador[$alvo.Ip]
+        $lojasRoteadorOk[$alvo.Loja] = $r.Respondeu
+        $linhas += [PSCustomObject]@{
+            Timestamp  = $timestamp
+            Loja       = $alvo.Loja
+            Tipo       = 'Roteador'
+            Ip         = $alvo.Ip
+            Respondeu  = $r.Respondeu
+            LatenciaMs = $r.LatenciaMs
+        }
+    }
+
+    $maquinaAlvos = @($alvos | Where-Object { $_.Tipo -eq 'Maquina' })
+    $maquinaParaTestar = @($maquinaAlvos | Where-Object {
+        -not $lojasRoteadorOk.ContainsKey($_.Loja) -or $lojasRoteadorOk[$_.Loja]
+    })
+    $maquinaParaPular = @($maquinaAlvos | Where-Object {
+        $lojasRoteadorOk.ContainsKey($_.Loja) -and -not $lojasRoteadorOk[$_.Loja]
+    })
+
+    $ipsMaquina = @($maquinaParaTestar | ForEach-Object { $_.Ip })
+    $resultadosMaquina = Test-IpsParalelo -Ips $ipsMaquina -TimeoutMs $TimeoutMs
+
+    foreach ($alvo in $maquinaParaTestar) {
+        $r = $resultadosMaquina[$alvo.Ip]
+        $linhas += [PSCustomObject]@{
+            Timestamp  = $timestamp
+            Loja       = $alvo.Loja
+            Tipo       = 'Maquina'
+            Ip         = $alvo.Ip
+            Respondeu  = $r.Respondeu
+            LatenciaMs = $r.LatenciaMs
+        }
+    }
+
+    foreach ($alvo in $maquinaParaPular) {
+        $linhas += [PSCustomObject]@{
+            Timestamp  = $timestamp
+            Loja       = $alvo.Loja
+            Tipo       = 'Maquina'
+            Ip         = $alvo.Ip
+            Respondeu  = $null
+            LatenciaMs = $null
+        }
+    }
+
+    return $linhas
+}
