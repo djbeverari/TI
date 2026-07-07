@@ -514,3 +514,115 @@ function Get-RankingLatencia {
 
     return ,@($ranking | Sort-Object LatenciaMediaMs -Descending | Select-Object -First $Top)
 }
+
+function New-RankingHtml {
+    param(
+        [Parameter(Mandatory)] [AllowEmptyCollection()] [array]$RankingRoteador,
+        [Parameter(Mandatory)] [AllowEmptyCollection()] [array]$RankingMaquina,
+        [Parameter(Mandatory)] [AllowEmptyCollection()] [array]$RankingLatencia,
+        [int]$Dias = 7,
+        [Parameter(Mandatory)] [string]$OutputPath
+    )
+
+    $atualizacao = (Get-Date).ToString('dd/MM/yyyy HH:mm:ss')
+
+    $linhasRoteador = if ($RankingRoteador.Count -eq 0) {
+        '<tr><td colspan="3" class="vazio">Sem dados suficientes ainda</td></tr>'
+    } else {
+        ($RankingRoteador | ForEach-Object { "<tr><td class=`"loja`">$($_.Loja)</td><td>$($_.PctQueda)%</td><td>$($_.HorarioPico)</td></tr>" }) -join "`n"
+    }
+
+    $linhasMaquina = if ($RankingMaquina.Count -eq 0) {
+        '<tr><td colspan="3" class="vazio">Sem dados suficientes ainda</td></tr>'
+    } else {
+        ($RankingMaquina | ForEach-Object { "<tr><td class=`"loja`">$($_.Loja)</td><td>$($_.PctQueda)%</td><td>$($_.HorarioPico)</td></tr>" }) -join "`n"
+    }
+
+    $linhasLatencia = if ($RankingLatencia.Count -eq 0) {
+        '<tr><td colspan="2" class="vazio">Sem dados suficientes ainda</td></tr>'
+    } else {
+        ($RankingLatencia | ForEach-Object { "<tr><td class=`"loja`">$($_.Loja)</td><td>$($_.LatenciaMediaMs)ms</td></tr>" }) -join "`n"
+    }
+
+    $html = @"
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ranking de Instabilidade — Lojas</title>
+<style>
+  :root {
+    --verde-escuro: #2f4a34;
+    --verde: #4a7c3f;
+    --marrom: #8b6f47;
+    --marrom-escuro: #5c4327;
+    --fundo: #f4efe6;
+    --card: #ffffff;
+    --texto: #3a2f26;
+    --texto-suave: #746a5c;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", system-ui, Arial, sans-serif; margin: 0; background: var(--fundo); color: var(--texto); }
+  header { background: linear-gradient(135deg, var(--verde-escuro), var(--verde)); color: #fff; padding: 24px 32px; }
+  header h1 { margin: 0 0 4px 0; font-size: 1.5rem; }
+  header p { margin: 4px 0 0; opacity: 0.85; font-size: 0.9rem; }
+  header a { color: #fff; }
+  main {
+    padding: 24px 32px 48px;
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    gap: 24px;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  }
+  .painel { background: var(--card); border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); overflow: hidden; }
+  .painel h2 { margin: 0; padding: 14px 16px; background: var(--verde-escuro); color: #fff; font-size: 1rem; }
+  table { border-collapse: collapse; width: 100%; }
+  th { text-align: left; padding: 8px 16px; font-size: 0.75rem; text-transform: uppercase; color: var(--texto-suave); border-bottom: 1px solid #eee5d8; }
+  td { padding: 8px 16px; border-bottom: 1px solid #eee5d8; font-size: 0.9rem; }
+  tr:last-child td { border-bottom: none; }
+  td.loja { font-weight: 600; }
+  td.vazio { color: var(--texto-suave); text-align: center; padding: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Ranking de Instabilidade das Lojas</h1>
+  <p>Últimos $Dias dias — atualizado em $atualizacao</p>
+  <p><a href="conectividade.html">← Voltar ao painel</a></p>
+</header>
+<main>
+  <div class="painel">
+    <h2>Mais quedas — Roteador</h2>
+    <table>
+      <tr><th>Loja</th><th>% fora</th><th>Horário mais comum</th></tr>
+      $linhasRoteador
+    </table>
+  </div>
+  <div class="painel">
+    <h2>Mais quedas — Máquina</h2>
+    <table>
+      <tr><th>Loja</th><th>% fora</th><th>Horário mais comum</th></tr>
+      $linhasMaquina
+    </table>
+  </div>
+  <div class="painel">
+    <h2>Mais lentas</h2>
+    <table>
+      <tr><th>Loja</th><th>Latência média</th></tr>
+      $linhasLatencia
+    </table>
+  </div>
+</main>
+</body>
+</html>
+"@
+
+    $outputDir = Split-Path $OutputPath -Parent
+    if ($outputDir -and -not (Test-Path $outputDir)) {
+        New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
+    }
+    $utf8Bom = New-Object System.Text.UTF8Encoding($true)
+    [System.IO.File]::WriteAllText($OutputPath, $html, $utf8Bom)
+}

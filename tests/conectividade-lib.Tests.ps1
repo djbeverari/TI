@@ -334,3 +334,29 @@ Describe 'Get-RankingLatencia' {
         $ranking[0].Loja | Should -Be '3'
     }
 }
+
+Describe 'New-RankingHtml' {
+    It 'gera HTML com as três tabelas preenchidas' {
+        $saida = Join-Path $TestDrive 'ranking.html'
+        $rankingRoteador = @([PSCustomObject]@{ Loja = '3'; PctQueda = 67; HorarioPico = '14h–15h' })
+        $rankingMaquina = @([PSCustomObject]@{ Loja = '4'; PctQueda = 20; HorarioPico = '09h–10h' })
+        $rankingLatencia = @([PSCustomObject]@{ Loja = '5'; LatenciaMediaMs = 150 })
+
+        New-RankingHtml -RankingRoteador $rankingRoteador -RankingMaquina $rankingMaquina -RankingLatencia $rankingLatencia -Dias 7 -OutputPath $saida
+
+        Test-Path $saida | Should -Be $true
+        $conteudo = Get-Content $saida -Raw
+        $conteudo | Should -Match '67%'
+        $conteudo | Should -Match '14h–15h'
+        $conteudo | Should -Match '150ms'
+        $conteudo | Should -Match 'conectividade\.html'
+    }
+
+    It 'mostra mensagem de "sem dados" quando um ranking está vazio' {
+        $saida = Join-Path $TestDrive 'ranking-vazio.html'
+        New-RankingHtml -RankingRoteador @() -RankingMaquina @() -RankingLatencia @() -Dias 7 -OutputPath $saida
+
+        $conteudo = Get-Content $saida -Raw
+        $conteudo | Should -Match 'Sem dados suficientes'
+    }
+}
