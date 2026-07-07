@@ -271,3 +271,37 @@ Describe 'Get-HistoricoPeriodo' {
         $historico.Count | Should -Be 1
     }
 }
+
+Describe 'Get-RankingInstabilidade' {
+    BeforeAll {
+        $historico = @(
+            [PSCustomObject]@{ Timestamp = '2026-07-01T14:00:00'; Loja = '3'; Tipo = 'Roteador'; Respondeu = 'False' },
+            [PSCustomObject]@{ Timestamp = '2026-07-02T14:30:00'; Loja = '3'; Tipo = 'Roteador'; Respondeu = 'False' },
+            [PSCustomObject]@{ Timestamp = '2026-07-03T09:00:00'; Loja = '3'; Tipo = 'Roteador'; Respondeu = 'True' },
+            [PSCustomObject]@{ Timestamp = '2026-07-01T10:00:00'; Loja = '4'; Tipo = 'Roteador'; Respondeu = 'True' },
+            [PSCustomObject]@{ Timestamp = '2026-07-01T11:00:00'; Loja = '4'; Tipo = 'Roteador'; Respondeu = 'True' },
+            [PSCustomObject]@{ Timestamp = '2026-07-01T10:00:00'; Loja = '995'; Tipo = 'Maquina'; Respondeu = 'True' }
+        )
+    }
+
+    It 'calcula % de queda e horário de pico, ignorando lojas sem ciclos testados no Tipo' {
+        $ranking = Get-RankingInstabilidade -Historico $historico -Tipo 'Roteador' -Top 10
+        $ranking.Count | Should -Be 2
+
+        $loja3 = $ranking | Where-Object Loja -eq '3'
+        $loja3.PctQueda | Should -Be 67
+        $loja3.HorarioPico | Should -Be '14h–15h'
+
+        $loja4 = $ranking | Where-Object Loja -eq '4'
+        $loja4.PctQueda | Should -Be 0
+        $loja4.HorarioPico | Should -Be '—'
+
+        ($ranking | Where-Object Loja -eq '995') | Should -BeNullOrEmpty
+    }
+
+    It 'respeita o parâmetro Top e ordena do maior % de queda pro menor' {
+        $ranking = Get-RankingInstabilidade -Historico $historico -Tipo 'Roteador' -Top 1
+        $ranking.Count | Should -Be 1
+        $ranking[0].Loja | Should -Be '3'
+    }
+}

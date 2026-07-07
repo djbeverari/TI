@@ -457,3 +457,39 @@ function Get-HistoricoPeriodo {
     }
     return ,$historico
 }
+
+function Get-RankingInstabilidade {
+    param(
+        [Parameter(Mandatory)] [AllowEmptyCollection()] [array]$Historico,
+        [Parameter(Mandatory)] [ValidateSet('Roteador', 'Maquina')] [string]$Tipo,
+        [int]$Top = 10
+    )
+
+    $porLoja = @($Historico | Where-Object { $_.Tipo -eq $Tipo -and $_.Respondeu -ne '' } | Group-Object Loja)
+
+    $ranking = foreach ($grupo in $porLoja) {
+        $total = $grupo.Count
+        $quedas = @($grupo.Group | Where-Object { $_.Respondeu -eq 'False' })
+        $pctQueda = [math]::Round(($quedas.Count / $total) * 100)
+
+        $horarioPico = '—'
+        $horaMaisComum = $quedas | ForEach-Object {
+            [datetime]$dt = [datetime]::MinValue
+            if ([datetime]::TryParse($_.Timestamp, [ref]$dt)) { $dt.Hour }
+        } | Group-Object | Sort-Object Count -Descending | Select-Object -First 1
+
+        if ($horaMaisComum) {
+            $hora = [int]$horaMaisComum.Name
+            $horaFim = ($hora + 1) % 24
+            $horarioPico = "{0:D2}h–{1:D2}h" -f $hora, $horaFim
+        }
+
+        [PSCustomObject]@{
+            Loja        = $grupo.Name
+            PctQueda    = $pctQueda
+            HorarioPico = $horarioPico
+        }
+    }
+
+    return ,@($ranking | Sort-Object PctQueda -Descending | Select-Object -First $Top)
+}
