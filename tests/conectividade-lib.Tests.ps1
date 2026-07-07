@@ -166,3 +166,38 @@ Describe 'Add-HistoricoConectividade e Get-HistoricoDia' {
         (Get-HistoricoDia -LogDir $logDir -Data $data).Count | Should -Be 0
     }
 }
+
+Describe 'Get-EstatisticasLoja' {
+    BeforeAll {
+        $historico = @(
+            [PSCustomObject]@{ Timestamp = '2026-07-07T08:00:00'; Loja = '3'; Tipo = 'Maquina'; Respondeu = 'True' },
+            [PSCustomObject]@{ Timestamp = '2026-07-07T08:05:00'; Loja = '3'; Tipo = 'Maquina'; Respondeu = 'False' },
+            [PSCustomObject]@{ Timestamp = '2026-07-07T08:10:00'; Loja = '3'; Tipo = 'Maquina'; Respondeu = 'True' },
+            [PSCustomObject]@{ Timestamp = '2026-07-07T08:10:00'; Loja = '4'; Tipo = 'Maquina'; Respondeu = '' }
+        )
+    }
+
+    It 'calcula uptime% e última resposta ignorando linhas N/A' {
+        $stats = Get-EstatisticasLoja -Historico $historico -Loja '3' -Tipo 'Maquina'
+        $stats.UptimePct | Should -Be 67
+        $stats.UltimaResposta | Should -Be '2026-07-07T08:10:00'
+    }
+
+    It 'retorna "—" e 0% quando nunca respondeu (só linhas N/A)' {
+        $stats = Get-EstatisticasLoja -Historico $historico -Loja '4' -Tipo 'Maquina'
+        $stats.UptimePct | Should -Be 0
+        $stats.UltimaResposta | Should -Be '—'
+    }
+
+    It 'retorna "—" e 0% quando a loja não aparece no histórico' {
+        $stats = Get-EstatisticasLoja -Historico $historico -Loja '99' -Tipo 'Maquina'
+        $stats.UptimePct | Should -Be 0
+        $stats.UltimaResposta | Should -Be '—'
+    }
+
+    It 'retorna "—" e 0% quando Historico está vazio (início do dia)' {
+        $stats = Get-EstatisticasLoja -Historico @() -Loja '3' -Tipo 'Maquina'
+        $stats.UptimePct | Should -Be 0
+        $stats.UltimaResposta | Should -Be '—'
+    }
+}

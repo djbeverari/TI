@@ -201,3 +201,31 @@ function Get-HistoricoDia {
     }
     return @(Import-Csv -Path $arquivo -Encoding UTF8)
 }
+
+# --- Estatísticas ---
+
+function Get-EstatisticasLoja {
+    param(
+        [Parameter(Mandatory)] [AllowEmptyCollection()] [array]$Historico,
+        [Parameter(Mandatory)] [string]$Loja,
+        [Parameter(Mandatory)] [ValidateSet('Roteador', 'Maquina')] [string]$Tipo
+    )
+
+    $linhas = @($Historico | Where-Object {
+        $_.Loja -eq $Loja -and $_.Tipo -eq $Tipo -and $_.Respondeu -ne ''
+    })
+    $total = $linhas.Count
+    $sucesso = @($linhas | Where-Object { $_.Respondeu -eq 'True' }).Count
+
+    $uptimePct = if ($total -gt 0) { [math]::Round(($sucesso / $total) * 100) } else { 0 }
+
+    $ultimaResposta = $linhas |
+        Where-Object { $_.Respondeu -eq 'True' } |
+        Sort-Object Timestamp -Descending |
+        Select-Object -First 1 -ExpandProperty Timestamp
+
+    return [PSCustomObject]@{
+        UptimePct      = $uptimePct
+        UltimaResposta = if ($ultimaResposta) { $ultimaResposta } else { '—' }
+    }
+}
