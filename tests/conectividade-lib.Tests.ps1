@@ -201,3 +201,46 @@ Describe 'Get-EstatisticasLoja' {
         $stats.UltimaResposta | Should -Be '—'
     }
 }
+
+Describe 'New-PainelHtml' {
+    It 'gera HTML com status, uptime e marca N/A quando aplicável' {
+        $lojas = @(
+            @{ Numero = 3; Servidor = '192.168.3.100\sqlexpress' },
+            @{ Numero = 995; Servidor = '192.168.0.10\sqlexpress'; Banco = 'Lojaonline'; RotuloLog = 'E-COMMERCE' }
+        )
+        $resultados = @(
+            [PSCustomObject]@{ Loja = '3'; Tipo = 'Roteador'; Respondeu = $true; LatenciaMs = 12 },
+            [PSCustomObject]@{ Loja = '3'; Tipo = 'Maquina'; Respondeu = $true; LatenciaMs = 20 },
+            [PSCustomObject]@{ Loja = 'E-COMMERCE'; Tipo = 'Maquina'; Respondeu = $false; LatenciaMs = $null }
+        )
+        $historico = @(
+            [PSCustomObject]@{ Timestamp = '2026-07-07T08:00:00'; Loja = '3'; Tipo = 'Maquina'; Respondeu = 'True' },
+            [PSCustomObject]@{ Timestamp = '2026-07-07T08:00:00'; Loja = 'E-COMMERCE'; Tipo = 'Maquina'; Respondeu = 'False' }
+        )
+        $saida = Join-Path $TestDrive 'conectividade.html'
+
+        New-PainelHtml -Resultados $resultados -Lojas $lojas -Historico $historico -SemRoteador @('E-COMMERCE') -OutputPath $saida
+
+        Test-Path $saida | Should -Be $true
+        $conteudo = Get-Content $saida -Raw
+        $conteudo | Should -Match '🟢'
+        $conteudo | Should -Match '🟤'
+        $conteudo | Should -Match 'N/A'
+        $conteudo | Should -Match '100%'
+        $conteudo | Should -Match '0%'
+    }
+
+    It 'não lança erro quando Historico está vazio (início do dia)' {
+        $lojas = @(
+            @{ Numero = 3; Servidor = '192.168.3.100\sqlexpress' }
+        )
+        $resultados = @(
+            [PSCustomObject]@{ Loja = '3'; Tipo = 'Roteador'; Respondeu = $true; LatenciaMs = 12 },
+            [PSCustomObject]@{ Loja = '3'; Tipo = 'Maquina'; Respondeu = $true; LatenciaMs = 20 }
+        )
+        $saida = Join-Path $TestDrive 'conectividade-vazio.html'
+
+        { New-PainelHtml -Resultados $resultados -Lojas $lojas -Historico @() -OutputPath $saida } | Should -Not -Throw
+        Test-Path $saida | Should -Be $true
+    }
+}

@@ -229,3 +229,80 @@ function Get-EstatisticasLoja {
         UltimaResposta = if ($ultimaResposta) { $ultimaResposta } else { '—' }
     }
 }
+
+# --- Painel HTML ---
+
+function New-PainelHtml {
+    param(
+        [Parameter(Mandatory)] [AllowEmptyCollection()] [array]$Resultados,
+        [Parameter(Mandatory)] [AllowEmptyCollection()] [array]$Lojas,
+        [Parameter(Mandatory)] [AllowEmptyCollection()] [array]$Historico,
+        [string[]]$SemRoteador = @('E-COMMERCE'),
+        [Parameter(Mandatory)] [string]$OutputPath
+    )
+
+    $atualizacao = (Get-Date).ToString('dd/MM/yyyy HH:mm:ss')
+    $totalOk = 0
+    $linhasHtml = @()
+
+    foreach ($loja in $Lojas) {
+        $rotulo = Get-LojaRotulo -Loja $loja
+        $temRoteador = $rotulo -notin $SemRoteador
+
+        $roteadorOk = $true
+        $roteadorCell = 'N/A'
+        if ($temRoteador) {
+            $r = $Resultados | Where-Object { $_.Loja -eq $rotulo -and $_.Tipo -eq 'Roteador' } | Select-Object -First 1
+            $roteadorOk = $r.Respondeu -eq $true
+            $roteadorCell = if ($roteadorOk) { "🟢 $($r.LatenciaMs)ms" } else { '🟤' }
+        }
+
+        $m = $Resultados | Where-Object { $_.Loja -eq $rotulo -and $_.Tipo -eq 'Maquina' } | Select-Object -First 1
+        $maquinaOk = $m.Respondeu -eq $true
+        $maquinaCell = if ($null -eq $m.Respondeu) { 'N/A' } elseif ($maquinaOk) { "🟢 $($m.LatenciaMs)ms" } else { '🟤' }
+
+        $statsM = Get-EstatisticasLoja -Historico $Historico -Loja $rotulo -Tipo 'Maquina'
+
+        $linhaOk = $roteadorOk -and $maquinaOk
+        if ($linhaOk) { $totalOk++ }
+        $classe = if ($linhaOk) { 'ok' } else { 'problema' }
+
+        $linhasHtml += "<tr class=`"$classe`"><td>$rotulo</td><td>$roteadorCell</td><td>$maquinaCell</td><td>$($statsM.UltimaResposta)</td><td>$($statsM.UptimePct)%</td></tr>"
+    }
+
+    $totalProblema = $Lojas.Count - $totalOk
+
+    $html = @"
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Conectividade das Lojas</title>
+<style>
+body { font-family: Arial, sans-serif; margin: 20px; background: #faf6f0; color: #3a2f26; }
+h1 { color: #3a5a40; }
+table { border-collapse: collapse; width: 100%; }
+th, td { border: 1px solid #8b6f47; padding: 6px 10px; text-align: center; }
+th { background: #4a7c3f; color: #fff; }
+tr.ok { background: #dff0d8; }
+tr.problema { background: #e6d2b5; }
+</style>
+</head>
+<body>
+<h1>Conectividade das Lojas</h1>
+<p>Última atualização: $atualizacao</p>
+<p>OK: $totalOk &nbsp; | &nbsp; Com problema: $totalProblema</p>
+<table>
+<tr><th>Loja</th><th>Roteador</th><th>Máquina</th><th>Última resposta</th><th>Uptime hoje</th></tr>
+$($linhasHtml -join "`n")
+</table>
+</body>
+</html>
+"@
+
+    $outputDir = Split-Path $OutputPath -Parent
+    if ($outputDir -and -not (Test-Path $outputDir)) {
+        New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
+    }
+    $html | Out-File -FilePath $OutputPath -Encoding UTF8
+}
