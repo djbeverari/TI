@@ -1,4 +1,4 @@
-function Get-RouterIp {
+﻿function Get-RouterIp {
     param([Parameter(Mandatory)] [string]$MachineIp)
 
     $partes = $MachineIp -split '\.'
@@ -243,6 +243,7 @@ function New-PainelHtml {
 
     $atualizacao = (Get-Date).ToString('dd/MM/yyyy HH:mm:ss')
     $totalOk = 0
+    $somaUptime = 0
     $linhasHtml = @()
 
     foreach ($loja in $Lojas) {
@@ -250,52 +251,184 @@ function New-PainelHtml {
         $temRoteador = $rotulo -notin $SemRoteador
 
         $roteadorOk = $true
-        $roteadorCell = 'N/A'
+        $roteadorCell = '<span class="na">N/A</span>'
         if ($temRoteador) {
             $r = $Resultados | Where-Object { $_.Loja -eq $rotulo -and $_.Tipo -eq 'Roteador' } | Select-Object -First 1
             $roteadorOk = $r.Respondeu -eq $true
-            $roteadorCell = if ($roteadorOk) { "🟢 $($r.LatenciaMs)ms" } else { '🟤' }
+            $roteadorCell = if ($roteadorOk) { "<span class=`"badge ok`">🟢 $($r.LatenciaMs)ms</span>" } else { '<span class="badge problema">🟤 offline</span>' }
         }
 
         $m = $Resultados | Where-Object { $_.Loja -eq $rotulo -and $_.Tipo -eq 'Maquina' } | Select-Object -First 1
         $maquinaOk = $m.Respondeu -eq $true
-        $maquinaCell = if ($null -eq $m.Respondeu) { 'N/A' } elseif ($maquinaOk) { "🟢 $($m.LatenciaMs)ms" } else { '🟤' }
+        $maquinaCell = if ($null -eq $m.Respondeu) { '<span class="na">N/A</span>' } elseif ($maquinaOk) { "<span class=`"badge ok`">🟢 $($m.LatenciaMs)ms</span>" } else { '<span class="badge problema">🟤 offline</span>' }
 
         $statsM = Get-EstatisticasLoja -Historico $Historico -Loja $rotulo -Tipo 'Maquina'
+        $somaUptime += $statsM.UptimePct
+        $ultimaRespostaFmt = $statsM.UltimaResposta
+        [datetime]$comoData = [datetime]::MinValue
+        if ([datetime]::TryParse($statsM.UltimaResposta, [ref]$comoData)) {
+            $ultimaRespostaFmt = $comoData.ToString('HH:mm:ss')
+        }
 
         $linhaOk = $roteadorOk -and $maquinaOk
         if ($linhaOk) { $totalOk++ }
         $classe = if ($linhaOk) { 'ok' } else { 'problema' }
+        $barraCor = if ($statsM.UptimePct -ge 90) { '#4a7c3f' } elseif ($statsM.UptimePct -ge 50) { '#c9a227' } else { '#8b4a2b' }
 
-        $linhasHtml += "<tr class=`"$classe`"><td>$rotulo</td><td>$roteadorCell</td><td>$maquinaCell</td><td>$($statsM.UltimaResposta)</td><td>$($statsM.UptimePct)%</td></tr>"
+        $linhasHtml += @"
+<tr class="$classe">
+  <td class="loja">$rotulo</td>
+  <td>$roteadorCell</td>
+  <td>$maquinaCell</td>
+  <td class="hora">$ultimaRespostaFmt</td>
+  <td class="uptime">
+    <div class="uptime-track"><div class="uptime-fill" style="width:$($statsM.UptimePct)%;background:$barraCor;"></div></div>
+    <span class="uptime-label">$($statsM.UptimePct)%</span>
+  </td>
+</tr>
+"@
     }
 
     $totalProblema = $Lojas.Count - $totalOk
+    $uptimeMedio = if ($Lojas.Count -gt 0) { [math]::Round($somaUptime / $Lojas.Count) } else { 0 }
 
     $html = @"
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Conectividade das Lojas</title>
 <style>
-body { font-family: Arial, sans-serif; margin: 20px; background: #faf6f0; color: #3a2f26; }
-h1 { color: #3a5a40; }
-table { border-collapse: collapse; width: 100%; }
-th, td { border: 1px solid #8b6f47; padding: 6px 10px; text-align: center; }
-th { background: #4a7c3f; color: #fff; }
-tr.ok { background: #dff0d8; }
-tr.problema { background: #e6d2b5; }
+  :root {
+    --verde-escuro: #2f4a34;
+    --verde: #4a7c3f;
+    --verde-claro: #dff0d8;
+    --marrom: #8b6f47;
+    --marrom-escuro: #5c4327;
+    --marrom-claro: #e6d2b5;
+    --fundo: #f4efe6;
+    --card: #ffffff;
+    --texto: #3a2f26;
+    --texto-suave: #746a5c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", system-ui, Arial, sans-serif;
+    margin: 0;
+    background: var(--fundo);
+    color: var(--texto);
+  }
+  header {
+    background: linear-gradient(135deg, var(--verde-escuro), var(--verde));
+    color: #fff;
+    padding: 24px 32px;
+  }
+  header h1 { margin: 0 0 4px 0; font-size: 1.5rem; }
+  header p { margin: 0; opacity: 0.85; font-size: 0.9rem; }
+  main { padding: 24px 32px 48px; max-width: 1200px; margin: 0 auto; }
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    border-left: 5px solid var(--marrom);
+  }
+  .card.verde { border-left-color: var(--verde); }
+  .card.marrom { border-left-color: var(--marrom-escuro); }
+  .card .valor { font-size: 1.9rem; font-weight: 700; line-height: 1.1; }
+  .card .rotulo { font-size: 0.85rem; color: var(--texto-suave); margin-top: 4px; }
+  .painel {
+    background: var(--card);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    overflow: hidden;
+  }
+  table { border-collapse: collapse; width: 100%; }
+  thead th {
+    background: var(--verde-escuro);
+    color: #fff;
+    text-align: left;
+    padding: 12px 16px;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    position: sticky;
+    top: 0;
+  }
+  td { padding: 10px 16px; border-bottom: 1px solid #eee5d8; font-size: 0.92rem; }
+  tr:last-child td { border-bottom: none; }
+  tr.problema { background: #fbf3e7; }
+  tr:hover td { background: #f2ead9; }
+  td.loja { font-weight: 600; }
+  td.hora, td.uptime { color: var(--texto-suave); white-space: nowrap; }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+  .badge.ok { background: var(--verde-claro); color: var(--verde-escuro); }
+  .badge.problema { background: var(--marrom-claro); color: var(--marrom-escuro); }
+  .na { color: #b3a898; font-size: 0.82rem; }
+  .uptime { display: flex; align-items: center; gap: 8px; }
+  .uptime-track {
+    width: 70px;
+    height: 6px;
+    background: #eee5d8;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .uptime-fill { height: 100%; border-radius: 999px; }
+  .uptime-label { font-weight: 600; min-width: 34px; }
+  footer { text-align: center; padding: 20px; color: var(--texto-suave); font-size: 0.8rem; }
 </style>
 </head>
 <body>
-<h1>Conectividade das Lojas</h1>
-<p>Última atualização: $atualizacao</p>
-<p>OK: $totalOk &nbsp; | &nbsp; Com problema: $totalProblema</p>
-<table>
-<tr><th>Loja</th><th>Roteador</th><th>Máquina</th><th>Última resposta</th><th>Uptime hoje</th></tr>
-$($linhasHtml -join "`n")
-</table>
+<header>
+  <h1>Conectividade das Lojas</h1>
+  <p>Última atualização: $atualizacao</p>
+</header>
+<main>
+  <div class="cards">
+    <div class="card verde">
+      <div class="valor">$($Lojas.Count)</div>
+      <div class="rotulo">Lojas monitoradas</div>
+    </div>
+    <div class="card verde">
+      <div class="valor">$totalOk</div>
+      <div class="rotulo">OK agora</div>
+    </div>
+    <div class="card marrom">
+      <div class="valor">$totalProblema</div>
+      <div class="rotulo">Com problema</div>
+    </div>
+    <div class="card">
+      <div class="valor">$uptimeMedio%</div>
+      <div class="rotulo">Uptime médio hoje</div>
+    </div>
+  </div>
+  <div class="painel">
+    <table>
+      <thead>
+        <tr><th>Loja</th><th>Roteador</th><th>Máquina</th><th>Última resposta</th><th>Uptime hoje</th></tr>
+      </thead>
+      <tbody>
+        $($linhasHtml -join "`n")
+      </tbody>
+    </table>
+  </div>
+</main>
+<footer>Atualiza automaticamente a cada 5 minutos, 8h–18h, dias úteis.</footer>
 </body>
 </html>
 "@
@@ -304,5 +437,6 @@ $($linhasHtml -join "`n")
     if ($outputDir -and -not (Test-Path $outputDir)) {
         New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
     }
-    $html | Out-File -FilePath $OutputPath -Encoding UTF8
+    $utf8Bom = New-Object System.Text.UTF8Encoding($true)
+    [System.IO.File]::WriteAllText($OutputPath, $html, $utf8Bom)
 }

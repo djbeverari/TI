@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$LibPath = "$PSScriptRoot\conectividade-lib.ps1",
     [string]$ConfigPath = "$PSScriptRoot\scripts\lojas-config.ps1",
     [string]$LogDir = 'C:\Logs\Conectividade',
