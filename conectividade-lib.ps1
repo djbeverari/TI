@@ -25,7 +25,7 @@ function Get-LojaRotulo {
 
 function Get-LojasParaTeste {
     param(
-        [Parameter(Mandatory)] [array]$Lojas,
+        [Parameter(Mandatory)] [AllowEmptyCollection()] [array]$Lojas,
         [string[]]$SemRoteador = @('E-COMMERCE')
     )
 
@@ -103,7 +103,7 @@ function Test-IpsParalelo {
 
 function Invoke-CicloConectividade {
     param(
-        [Parameter(Mandatory)] [array]$Lojas,
+        [Parameter(Mandatory)] [AllowEmptyCollection()] [array]$Lojas,
         [string[]]$SemRoteador = @('E-COMMERCE'),
         [int]$TimeoutMs = 2000
     )
@@ -130,6 +130,8 @@ function Invoke-CicloConectividade {
         }
     }
 
+    # Pula a máquina quando o roteador da loja já falhou — está inacessível de
+    # qualquer forma, e evitar o ping poupa o orçamento de tempo do ciclo.
     $maquinaAlvos = @($alvos | Where-Object { $_.Tipo -eq 'Maquina' })
     $maquinaParaTestar = @($maquinaAlvos | Where-Object {
         -not $lojasRoteadorOk.ContainsKey($_.Loja) -or $lojasRoteadorOk[$_.Loja]

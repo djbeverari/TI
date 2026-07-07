@@ -124,4 +124,10 @@ Describe 'Invoke-CicloConectividade' {
 
         ($linhas | Where-Object { $_.Loja -eq 'E-COMMERCE' }).Tipo | Should -Be 'Maquina'
     }
+
+    It 'retorna array vazio sem erro quando não há lojas' {
+        Mock Test-IpsParalelo { @{} }
+        $linhas = @(Invoke-CicloConectividade -Lojas @())
+        $linhas.Count | Should -Be 0
+    }
 }
