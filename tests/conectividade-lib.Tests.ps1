@@ -244,3 +244,30 @@ Describe 'New-PainelHtml' {
         Test-Path $saida | Should -Be $true
     }
 }
+
+Describe 'Get-HistoricoPeriodo' {
+    It 'concatena os dias que existem e ignora os que não existem' {
+        $logDir = Join-Path $TestDrive 'logs-periodo'
+        $hoje = Get-Date '2026-07-07'
+        $ontem = $hoje.AddDays(-1)
+        # antes de ontem: sem arquivo (não deve dar erro)
+
+        Add-HistoricoConectividade -Linhas @([PSCustomObject]@{ Timestamp = '2026-07-07T08:00:00'; Loja = '3'; Tipo = 'Maquina'; Ip = 'x'; Respondeu = $true; LatenciaMs = 10 }) -LogDir $logDir -Data $hoje
+        Add-HistoricoConectividade -Linhas @([PSCustomObject]@{ Timestamp = '2026-07-06T08:00:00'; Loja = '3'; Tipo = 'Maquina'; Ip = 'x'; Respondeu = $false; LatenciaMs = $null }) -LogDir $logDir -Data $ontem
+
+        $historico = Get-HistoricoPeriodo -LogDir $logDir -Dias 7 -DataBase $hoje
+        $historico.Count | Should -Be 2
+    }
+
+    It 'respeita o parâmetro Dias' {
+        $logDir = Join-Path $TestDrive 'logs-periodo2'
+        $hoje = Get-Date '2026-07-07'
+        $ontem = $hoje.AddDays(-1)
+
+        Add-HistoricoConectividade -Linhas @([PSCustomObject]@{ Timestamp = '2026-07-07T08:00:00'; Loja = '3'; Tipo = 'Maquina'; Ip = 'x'; Respondeu = $true; LatenciaMs = 10 }) -LogDir $logDir -Data $hoje
+        Add-HistoricoConectividade -Linhas @([PSCustomObject]@{ Timestamp = '2026-07-06T08:00:00'; Loja = '3'; Tipo = 'Maquina'; Ip = 'x'; Respondeu = $false; LatenciaMs = $null }) -LogDir $logDir -Data $ontem
+
+        $historico = Get-HistoricoPeriodo -LogDir $logDir -Dias 1 -DataBase $hoje
+        $historico.Count | Should -Be 1
+    }
+}

@@ -440,3 +440,20 @@ function New-PainelHtml {
     $utf8Bom = New-Object System.Text.UTF8Encoding($true)
     [System.IO.File]::WriteAllText($OutputPath, $html, $utf8Bom)
 }
+
+# --- Ranking de instabilidade ---
+
+function Get-HistoricoPeriodo {
+    param(
+        [Parameter(Mandatory)] [string]$LogDir,
+        [int]$Dias = 7,
+        [datetime]$DataBase = (Get-Date)
+    )
+
+    $historico = @()
+    for ($i = 0; $i -lt $Dias; $i++) {
+        $data = $DataBase.AddDays(-$i)
+        $historico += @(Get-HistoricoDia -LogDir $LogDir -Data $data)
+    }
+    return ,$historico
+}
