@@ -325,6 +325,7 @@ function New-PainelHtml {
     padding: 24px 32px;
   }
   header h1 { margin: 0 0 4px 0; font-size: 1.5rem; }
+  header a { color: #fff; }
   header p { margin: 0; opacity: 0.85; font-size: 0.9rem; }
   main { padding: 24px 32px 48px; max-width: 1200px; margin: 0 auto; }
   .cards {
@@ -397,6 +398,7 @@ function New-PainelHtml {
 <header>
   <h1>Conectividade das Lojas</h1>
   <p>Última atualização: $atualizacao</p>
+  <p><a href="ranking.html">Ver ranking de instabilidade →</a></p>
 </header>
 <main>
   <div class="cards">

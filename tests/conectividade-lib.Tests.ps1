@@ -243,6 +243,20 @@ Describe 'New-PainelHtml' {
         { New-PainelHtml -Resultados $resultados -Lojas $lojas -Historico @() -OutputPath $saida } | Should -Not -Throw
         Test-Path $saida | Should -Be $true
     }
+
+    It 'inclui link para o ranking de instabilidade' {
+        $lojas = @(@{ Numero = 3; Servidor = '192.168.3.100\sqlexpress' })
+        $resultados = @(
+            [PSCustomObject]@{ Loja = '3'; Tipo = 'Roteador'; Respondeu = $true; LatenciaMs = 12 },
+            [PSCustomObject]@{ Loja = '3'; Tipo = 'Maquina'; Respondeu = $true; LatenciaMs = 20 }
+        )
+        $saida = Join-Path $TestDrive 'painel-com-link.html'
+
+        New-PainelHtml -Resultados $resultados -Lojas $lojas -Historico @() -OutputPath $saida
+
+        $conteudo = Get-Content $saida -Raw
+        $conteudo | Should -Match 'ranking\.html'
+    }
 }
 
 Describe 'Get-HistoricoPeriodo' {
