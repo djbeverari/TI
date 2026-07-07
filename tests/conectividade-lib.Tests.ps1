@@ -47,7 +47,7 @@ Describe 'Get-LojasParaTeste' {
 
     It 'gera Roteador + Maquina para loja normal' {
         $alvos = Get-LojasParaTeste -Lojas $lojas -SemRoteador @('E-COMMERCE')
-        $daLoja3 = $alvos | Where-Object { $_.Loja -eq '3' }
+        $daLoja3 = @($alvos | Where-Object { $_.Loja -eq '3' })
         $daLoja3.Count | Should -Be 2
         ($daLoja3 | Where-Object Tipo -eq 'Roteador').Ip | Should -Be '192.168.3.10'
         ($daLoja3 | Where-Object Tipo -eq 'Maquina').Ip | Should -Be '192.168.3.100'
