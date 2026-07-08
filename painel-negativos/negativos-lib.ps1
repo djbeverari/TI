@@ -129,7 +129,7 @@ function New-PainelHtml {
 <meta charset="utf-8">
 <title>Painel de Estoque Negativos</title>
 <style>
-body { font-family: Segoe UI, Arial, sans-serif; margin: 20px; background: #f4f4f4; }
+body { font-family: Segoe UI, Arial, sans-serif; margin: 20px; background: #e8dcc8; }
 .resumo { display: flex; gap: 16px; margin-bottom: 12px; }
 .resumo div { background: white; padding: 10px 16px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
 .aviso { background: #fff3cd; color: #856404; padding: 10px; border-radius: 6px; margin-bottom: 12px; font-weight: bold; }
