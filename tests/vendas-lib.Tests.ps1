@@ -37,3 +37,33 @@ Describe 'Get-VariacaoPercentual' {
         Get-VariacaoPercentual -Atual 50 -Anterior 0 | Should -Be 100.0
     }
 }
+
+Describe 'Get-ResumoVendas' {
+    BeforeAll {
+        $vendas = @(
+            [pscustomobject]@{ ValorVendaBruta = 100.0; ValorCancelado = 0.0;  QtdeTotal = 2 }
+            [pscustomobject]@{ ValorVendaBruta = 200.0; ValorCancelado = 50.0; QtdeTotal = 3 }
+            [pscustomobject]@{ ValorVendaBruta = 50.0;  ValorCancelado = 0.0;  QtdeTotal = 1 }
+        )
+    }
+
+    It 'calcula o faturamento como soma bruta menos cancelado' {
+        (Get-ResumoVendas -Vendas $vendas).Faturamento | Should -Be 300.0
+    }
+    It 'calcula o numero de vendas (tickets)' {
+        (Get-ResumoVendas -Vendas $vendas).NumeroVendas | Should -Be 3
+    }
+    It 'calcula o ticket medio sobre o faturamento' {
+        (Get-ResumoVendas -Vendas $vendas).TicketMedio | Should -Be 100.0
+    }
+    It 'calcula itens por venda' {
+        (Get-ResumoVendas -Vendas $vendas).ItensPorVenda | Should -Be 2.0
+    }
+    It 'retorna zeros para lista vazia, sem lançar erro' {
+        $resumo = Get-ResumoVendas -Vendas @()
+        $resumo.Faturamento | Should -Be 0.0
+        $resumo.NumeroVendas | Should -Be 0
+        $resumo.TicketMedio | Should -Be 0.0
+        $resumo.ItensPorVenda | Should -Be 0.0
+    }
+}

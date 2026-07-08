@@ -19,3 +19,27 @@ function Get-VariacaoPercentual {
     }
     [math]::Round((($Atual - $Anterior) / $Anterior) * 100, 2)
 }
+
+function Get-ResumoVendas {
+    param([Parameter(Mandatory)][AllowEmptyCollection()][array]$Vendas)
+
+    $numeroVendas = $Vendas.Count
+    if ($numeroVendas -eq 0) {
+        return [pscustomobject]@{
+            Faturamento   = 0.0
+            NumeroVendas  = 0
+            TicketMedio   = 0.0
+            ItensPorVenda = 0.0
+        }
+    }
+
+    $faturamento = ($Vendas | ForEach-Object { $_.ValorVendaBruta - $_.ValorCancelado } | Measure-Object -Sum).Sum
+    $qtdeTotal   = ($Vendas | Measure-Object -Property QtdeTotal -Sum).Sum
+
+    [pscustomobject]@{
+        Faturamento   = [math]::Round($faturamento, 2)
+        NumeroVendas  = $numeroVendas
+        TicketMedio   = [math]::Round($faturamento / $numeroVendas, 2)
+        ItensPorVenda = [math]::Round($qtdeTotal / $numeroVendas, 2)
+    }
+}
