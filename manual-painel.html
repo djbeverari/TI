@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Manual do Painel — Data Sync</title>
+<style>
+  body { font-family: "Segoe UI", sans-serif; max-width: 900px; margin: 40px auto; padding: 0 30px; color: #222; line-height: 1.7; }
+  h1 { color: #003d82; border-bottom: 3px solid #003d82; padding-bottom: 12px; font-size: 2em; }
+  h2 { color: #003d82; margin-top: 40px; font-size: 1.35em; border-left: 4px solid #003d82; padding-left: 12px; }
+  h3 { color: #444; margin-top: 22px; font-size: 1.05em; }
+  code { background: #f0f4f8; padding: 2px 7px; border-radius: 4px; font-family: Consolas, monospace; font-size: 0.93em; color: #c0392b; }
+  table { border-collapse: collapse; width: 100%; margin: 15px 0; }
+  th { background: #003d82; color: white; padding: 10px 14px; text-align: left; font-size: 0.9em; }
+  td { padding: 9px 14px; border-bottom: 1px solid #e0e0e0; font-size: 0.92em; }
+  tr:nth-child(even) { background: #f7f9fc; }
+  .box { padding: 14px 18px; border-radius: 6px; margin: 15px 0; border-left: 4px solid; }
+  .box.info  { background: #e8f4fd; border-color: #2196F3; }
+  .box.ok    { background: #f5fff5; border-color: #4CAF50; }
+  .box.warn  { background: #fff8f0; border-color: #ff9800; }
+  .box.err   { background: #fff5f5; border-color: #f44336; }
+  .card-demo { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.12); margin: 10px 0; display: inline-block; min-width: 200px; vertical-align: top; }
+  .card-demo .title { font-size: 0.8em; color: #999; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .card-demo .value { font-size: 2em; font-weight: bold; }
+  .card-demo .tag { display: inline-block; font-size: 0.8em; padding: 3px 10px; border-radius: 4px; color: white; margin-top: 6px; }
+  .tag-ok   { background: #4CAF50; }
+  .tag-warn { background: #ff9800; }
+  .tag-err  { background: #f44336; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 4px; font-size: 0.82em; font-weight: bold; color: white; margin-left: 4px; }
+  .badge-recebe { background: #9c27b0; }
+  .badge-envia  { background: #f44336; }
+  .cards-row { display: flex; gap: 15px; flex-wrap: wrap; margin: 20px 0; }
+  .step { display: flex; gap: 14px; margin: 12px 0; align-items: flex-start; }
+  .step-num { background: #003d82; color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9em; flex-shrink: 0; margin-top: 2px; }
+  hr { border: none; border-top: 1px solid #e0e0e0; margin: 40px 0; }
+  @media print { body { margin: 20px; } .cards-row { display: block; } .card-demo { display: block; margin: 10px 0; } }
+</style>
+</head>
+<body>
+
+<h1>Manual de Uso — Painel Data Sync<br><small style="font-size:0.5em; color:#666;">Guia para operadores e supervisores</small></h1>
+
+<p><strong>Endereço do painel:</strong> <code>http://192.168.0.147:8080/painel.html</code><br>
+Abra este endereço em qualquer navegador de qualquer computador da rede.</p>
+
+<div class="box info">
+  O painel atualiza automaticamente a cada <strong>30 segundos</strong>. Não é necessário recarregar a página manualmente.
+</div>
+
+<hr>
+
+<h2>1. Como Acessar o Painel</h2>
+
+<div class="step"><div class="step-num">1</div><div>Abra o navegador (Chrome, Edge, Firefox)</div></div>
+<div class="step"><div class="step-num">2</div><div>Digite na barra de endereço: <code>http://192.168.0.147:8080/painel.html</code></div></div>
+<div class="step"><div class="step-num">3</div><div>O painel carrega imediatamente — sem login necessário</div></div>
+
+<div class="box warn">
+  <strong>Se o painel não abrir:</strong> o servidor pode estar desligado ou o serviço parou. Entre em contato com a TI.
+</div>
+
+<hr>
+
+<h2>2. Entendendo os Cards (blocos de informação)</h2>
+
+<div class="cards-row">
+  <div class="card-demo">
+    <div class="title">Status Geral</div>
+    <div class="value" style="color:#4CAF50; font-size:1.4em;">● ATIVO</div>
+    <div><span class="tag tag-ok">Monitorando 24/7</span></div>
+  </div>
+  <div class="card-demo">
+    <div class="title">Última Sincronização</div>
+    <div class="value" style="color:#4CAF50;">10:30</div>
+    <div style="font-size:0.85em; color:#666;">21/05 &bull; 2 min atrás</div>
+    <div><span class="tag tag-ok">SUCESSO</span></div>
+  </div>
+  <div class="card-demo">
+    <div class="title">Lojas com Sucesso</div>
+    <div class="value" style="color:#4CAF50;">37</div>
+    <div><span class="tag tag-ok">Sincronizadas</span></div>
+  </div>
+  <div class="card-demo">
+    <div class="title">Lojas com Falha</div>
+    <div class="value" style="color:#f44336;">1</div>
+    <div><span class="tag tag-err">Requer Atenção</span></div>
+  </div>
+</div>
+
+<h3>Card: Status Geral</h3>
+<table>
+  <tr><th>Exibe</th><th>Significa</th></tr>
+  <tr><td>● ATIVO</td><td>O sistema de monitoramento está funcionando normalmente</td></tr>
+  <tr><td>● INATIVO</td><td>O serviço parou — acionar a TI</td></tr>
+</table>
+
+<h3>Card: Última Sincronização</h3>
+<p>Mostra o horário e a data do <strong>início do último ciclo de sincronização</strong>, quanto tempo atrás foi, e o resultado geral:</p>
+<table>
+  <tr><th>Status</th><th>Cor</th><th>Significado</th></tr>
+  <tr><td><span class="tag tag-ok">SUCESSO</span></td><td>Verde</td><td>Todas as lojas sincronizaram com sucesso</td></tr>
+  <tr><td><span class="tag tag-warn">PARCIAL</span></td><td>Laranja</td><td>A maioria sincronizou, mas houve falhas em algumas lojas</td></tr>
+  <tr><td><span class="tag tag-err">FALHA</span></td><td>Vermelho</td><td>Nenhuma loja conseguiu sincronizar — problema grave</td></tr>
+  <tr><td><span class="tag tag-warn">Desconhecido</span></td><td>Cinza</td><td>Sync em andamento ou sem registro do dia</td></tr>
+</table>
+
+<h3>Card: Lojas com Sucesso</h3>
+<p>Número de lojas que concluíram a sincronização com êxito no <strong>último ciclo completo</strong>. O total máximo é <strong>38</strong>.</p>
+
+<h3>Card: Lojas com Falha</h3>
+<p>Número de lojas que tiveram algum problema na sincronização. Veja a seção abaixo para identificar quais são.</p>
+
+<div class="box warn">
+  <strong>Durante a execução do sync</strong> (que pode durar de 30 min a 2h), os cards mostram os dados do ciclo anterior. Os números só atualizam quando o ciclo atual terminar.
+</div>
+
+<hr>
+
+<h2>3. Seção "Lojas com Problema"</h2>
+
+<p>Esta seção lista cada loja que falhou no <strong>último ciclo concluído</strong>, com badges indicando em qual operação ocorreu a falha:</p>
+
+<div style="background:#f9f9f9; padding:15px; border-left:5px solid #ff9800; border-radius:5px; margin:10px 0;">
+  <strong>Loja 57</strong>
+  <span class="badge badge-recebe">RECEBE</span>
+</div>
+
+<div style="background:#f9f9f9; padding:15px; border-left:5px solid #ff9800; border-radius:5px; margin:10px 0;">
+  <strong>Loja 09</strong>
+  <span class="badge badge-envia">ENVIA</span>
+</div>
+
+<div style="background:#f9f9f9; padding:15px; border-left:5px solid #ff9800; border-radius:5px; margin:10px 0;">
+  <strong>Loja 16</strong>
+  <span class="badge badge-recebe">RECEBE</span>
+  <span class="badge badge-envia">ENVIA</span>
+</div>
+
+<table style="margin-top:20px;">
+  <tr><th>Badge</th><th>Operação</th><th>O que significa</th></tr>
+  <tr><td><span class="badge badge-recebe">RECEBE</span></td><td>Recebimento</td><td>O servidor não conseguiu receber os dados desta loja</td></tr>
+  <tr><td><span class="badge badge-envia">ENVIA</span></td><td>Envio</td><td>O servidor não conseguiu enviar dados para esta loja</td></tr>
+  <tr><td><span class="badge badge-recebe">RECEBE</span> <span class="badge badge-envia">ENVIA</span></td><td>Ambos</td><td>A loja falhou nas duas operações — provavelmente sem conexão</td></tr>
+</table>
+
+<h3>Quando a seção aparece verde (sem erros)</h3>
+<div style="background:#f5fff5; padding:15px; border-left:5px solid #4CAF50; border-radius:5px;">
+  <span style="color:#4CAF50; font-weight:bold;">OK — Nenhuma loja com erro na última sincronização</span>
+</div>
+
+<hr>
+
+<h2>4. Horários de Sincronização</h2>
+
+<table>
+  <tr><th>Horário</th><th>Dias</th><th>Observação</th></tr>
+  <tr><td><strong>10:30</strong></td><td>Segunda a sexta</td><td>Ciclo principal — lojas abertas, melhor taxa de sucesso</td></tr>
+  <tr><td><strong>14:30</strong></td><td>Segunda a sexta</td><td>Ciclo intermediário</td></tr>
+  <tr><td><strong>16:30</strong></td><td>Segunda a sexta</td><td>Último ciclo — lojas de shopping podem estar encerrando</td></tr>
+</table>
+
+<div class="box info">
+  <strong>Sábados e domingos:</strong> a automação não executa. Os agendamentos ficam ativos mas o script bloqueia a execução nesses dias.
+</div>
+
+<h3>Por que algumas lojas falham no ciclo das 07h/08h (testes ou manutenção)?</h3>
+<p>Lojas que ainda não abriram têm o computador desligado ou sem conexão. Isso causa timeout (4 minutos de espera) e a loja aparece como falha. É comportamento normal — o ciclo das 10:30 tentará novamente quando as lojas estiverem abertas.</p>
+
+<hr>
+
+<h2>5. O que Fazer Quando Há Falhas</h2>
+
+<h3>Poucas lojas falharam (1 a 5)</h3>
+<div class="box ok">
+  Situação normal, especialmente no ciclo das 16:30 quando algumas lojas de shopping encerram mais cedo. O próximo ciclo tentará novamente. Só investigar se a mesma loja falhar em 3 ciclos seguidos.
+</div>
+
+<h3>Muitas lojas falharam (mais de 10)</h3>
+<div class="box warn">
+  Possíveis causas: queda de internet, servidor sobrecarregado, horário fora do expediente das lojas (ciclo das 16:30 com lojas fechando). Verificar se o problema persiste no ciclo seguinte.
+</div>
+
+<h3>Todas as lojas falharam</h3>
+<div class="box err">
+  Problema grave. Possíveis causas: servidor sem internet, erro no script, serviço do Linx DataSync parado. Acionar a TI imediatamente.
+</div>
+
+<h3>Uma loja específica falha sempre</h3>
+<p>Se a mesma loja falha repetidamente mesmo nos ciclos das 10:30 e 14:30, as causas mais comuns são:</p>
+<ul style="margin-left:20px;">
+  <li>Computador da loja desligado ou sem internet</li>
+  <li>Atalho do DataSync inválido ou desconfigurado para essa loja</li>
+  <li>Problema específico no DataSync client da loja</li>
+</ul>
+<p>Neste caso, acionar suporte para verificar a loja presencialmente ou por acesso remoto.</p>
+
+<hr>
+
+<h2>6. Controles Manuais (para o operador no servidor)</h2>
+
+<p>Na área de trabalho do servidor (192.168.0.147, usuário Datasync), existem três atalhos:</p>
+
+<table>
+  <tr><th>Arquivo</th><th>Quando usar</th><th>Como usar</th></tr>
+  <tr>
+    <td><code>pausar-agendamentos.bat</code></td>
+    <td>Quando precisar fazer manutenção no servidor e não quer que o sync rode automaticamente</td>
+    <td>Clique duplo — confirma com "S" se solicitado</td>
+  </tr>
+  <tr>
+    <td><code>retomar-agendamentos.bat</code></td>
+    <td>Após a manutenção, para reativar os ciclos automáticos</td>
+    <td>Clique duplo</td>
+  </tr>
+  <tr>
+    <td><code>executar-datasync.bat</code></td>
+    <td>Quando precisar rodar uma sincronização fora do horário agendado</td>
+    <td>Clique duplo — o sync inicia em background, acompanhe pelo painel</td>
+  </tr>
+</table>
+
+<div class="box warn">
+  <strong>Atenção:</strong> após usar <code>pausar-agendamentos.bat</code>, lembre-se sempre de usar <code>retomar-agendamentos.bat</code> para reativar os ciclos automáticos.
+</div>
+
+<hr>
+
+<h2>7. Referência Rápida</h2>
+
+<table>
+  <tr><th>Item</th><th>Valor</th></tr>
+  <tr><td>Endereço do painel</td><td>http://192.168.0.147:8080/painel.html</td></tr>
+  <tr><td>Total de lojas</td><td>38 lojas</td></tr>
+  <tr><td>Horários de sync</td><td>10:30, 14:30 e 16:30 (seg–sex)</td></tr>
+  <tr><td>Duração típica de um ciclo</td><td>30 a 60 minutos (depende das conexões)</td></tr>
+  <tr><td>Timeout por loja</td><td>4 minutos</td></tr>
+  <tr><td>Logs de sincronização</td><td>C:\Logs\DataSync\ no servidor</td></tr>
+  <tr><td>Contato TI</td><td>daniella@dorinhos.com.br</td></tr>
+</table>
+
+<hr>
+<p style="text-align:center; color:#aaa; font-size:0.85em;">TI Dorinhos &mdash; Manual do Painel Data Sync &mdash; Maio 2026</p>
+
+</body>
+</html>

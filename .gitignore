@@ -1,3 +1,9 @@
+.email_cred
+*.sql_cred*
+.painel_vendas_cred
+.datasync_cred
+servidor-http-debug.log
+
 .superpowers/
 
 # Painel de estoque negativos - artefatos gerados e credenciais locais
