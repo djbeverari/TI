@@ -1,3 +1,5 @@
+#Requires -RunAsAdministrator
+
 param(
     [int]$Porta = 8081
 )
@@ -17,6 +19,6 @@ $trigger = New-ScheduledTaskTrigger -AtLogOn
 Register-ScheduledTask -TaskName "PainelEstoqueNegativosWeb" `
     -Action $action -Trigger $trigger `
     -Description "Sobe o http.server do painel de estoque negativos na porta $Porta" `
-    -RunLevel Highest -Force
+    -RunLevel Highest -Force -ErrorAction Stop
 
 Write-Host "Tarefa 'PainelEstoqueNegativosWeb' registrada: inicia http.server na porta $Porta ao logar."
