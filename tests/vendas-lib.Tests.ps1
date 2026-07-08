@@ -22,3 +22,18 @@ Describe 'Format-DataSql' {
         Format-DataSql -Data (Get-Date -Year 2026 -Month 1 -Day 5) | Should -Be '20260105'
     }
 }
+
+Describe 'Get-VariacaoPercentual' {
+    It 'calcula variação positiva' {
+        Get-VariacaoPercentual -Atual 110 -Anterior 100 | Should -Be 10.0
+    }
+    It 'calcula variação negativa' {
+        Get-VariacaoPercentual -Atual 90 -Anterior 100 | Should -Be (-10.0)
+    }
+    It 'retorna 0 quando anterior é 0 e atual também é 0' {
+        Get-VariacaoPercentual -Atual 0 -Anterior 0 | Should -Be 0.0
+    }
+    It 'retorna 100 quando anterior é 0 e atual é maior que 0' {
+        Get-VariacaoPercentual -Atual 50 -Anterior 0 | Should -Be 100.0
+    }
+}
