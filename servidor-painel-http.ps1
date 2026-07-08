@@ -23,7 +23,12 @@ function Test-CaminhoProtegido {
 
 function Test-AutenticacaoBasica {
     param([string]$AuthorizationHeader)
-    if (-not (Test-Path $CredencialPainelProtegido)) {
+    $existeCredencial = Test-Path $CredencialPainelProtegido
+    $temHeader = -not [string]::IsNullOrEmpty($AuthorizationHeader)
+    try {
+        Add-Content -Path "$PSScriptRoot\servidor-http-debug.log" -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') DEBUG: CredencialPainelProtegido='$CredencialPainelProtegido' existe=$existeCredencial temHeaderAuthorization=$temHeader" -Encoding UTF8
+    } catch {}
+    if (-not $existeCredencial) {
         # Sem credencial guardada: nao bloqueia (evita travar o painel se
         # ninguem rodou guardar-senha-painel-vendas.ps1 ainda).
         return $true
@@ -103,7 +108,7 @@ while ($listener.IsListening) {
             } catch {
                 $erro = $_
                 Write-Host "Erro ao montar resposta 401: $erro" -ForegroundColor Red
-                try { Add-Content -Path (Join-Path $PastaLogs "servidor-http-erros.log") -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ERRO 401: $erro`n$($erro.ScriptStackTrace)" -Encoding UTF8 } catch {}
+                try { Add-Content -Path "$PSScriptRoot\servidor-http-erros.log" -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ERRO 401: $erro`n$($erro.ScriptStackTrace)" -Encoding UTF8 } catch {}
             } finally {
                 $response.Close()
             }
@@ -139,6 +144,6 @@ while ($listener.IsListening) {
     catch {
         $erro = $_
         Write-Host "Erro na requisicao: $erro" -ForegroundColor Red
-        try { Add-Content -Path (Join-Path $PastaLogs "servidor-http-erros.log") -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ERRO: $erro`n$($erro.ScriptStackTrace)" -Encoding UTF8 } catch {}
+        try { Add-Content -Path "$PSScriptRoot\servidor-http-erros.log" -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ERRO: $erro`n$($erro.ScriptStackTrace)" -Encoding UTF8 } catch {}
     }
 }

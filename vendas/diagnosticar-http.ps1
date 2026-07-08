@@ -57,6 +57,24 @@ Invoke-Command -Session $session -ScriptBlock {
     Write-Host ""
     Write-Host "=== 5. Conteudo atual de servidor-painel-http.ps1 no servidor (primeiras linhas) ===" -ForegroundColor Cyan
     Get-Content "C:\Users\Datasync\Desktop\ti\servidor-painel-http.ps1" -TotalCount 15 -Encoding UTF8
+
+    Write-Host ""
+    Write-Host "=== 6. Log de debug (ultimas 10 linhas) ===" -ForegroundColor Cyan
+    $debugLog = "C:\Logs\DataSync\servidor-http-debug.log"
+    if (Test-Path $debugLog) {
+        Get-Content $debugLog -Tail 10 -Encoding UTF8
+    } else {
+        Write-Host "Log de debug ainda nao existe (nenhuma requisicao a vendas.html processada apos o deploy)." -ForegroundColor Yellow
+    }
+
+    Write-Host ""
+    Write-Host "=== 7. Log de erros (ultimas 10 linhas) ===" -ForegroundColor Cyan
+    $errosLog = "C:\Logs\DataSync\servidor-http-erros.log"
+    if (Test-Path $errosLog) {
+        Get-Content $errosLog -Tail 10 -Encoding UTF8
+    } else {
+        Write-Host "Log de erros ainda nao existe." -ForegroundColor Yellow
+    }
 }
 
 Remove-PSSession $session
