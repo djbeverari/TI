@@ -45,6 +45,14 @@ Criar `painel-negativos/negativos-lib.Tests.ps1`:
 
 ```powershell
 BeforeAll {
+    if (-not (Get-Command Invoke-Sqlcmd -ErrorAction SilentlyContinue)) {
+        # Stub para maquinas de desenvolvimento sem o modulo SqlServer instalado.
+        # Na maquina de producao (com o modulo SqlServer), o cmdlet real e usado normalmente.
+        function Invoke-Sqlcmd {
+            param($ServerInstance, $Database, $Credential, $Query)
+        }
+    }
+
     . "$PSScriptRoot\negativos-lib.ps1"
 }
 
