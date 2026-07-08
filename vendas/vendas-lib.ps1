@@ -43,3 +43,28 @@ function Get-ResumoVendas {
         ItensPorVenda = [math]::Round($qtdeTotal / $numeroVendas, 2)
     }
 }
+
+function Get-EvolucaoDiaria {
+    param(
+        [Parameter(Mandatory)][AllowEmptyCollection()][array]$Vendas,
+        [Parameter(Mandatory)][int]$Ano,
+        [Parameter(Mandatory)][int]$Mes,
+        [Parameter(Mandatory)][int]$DiasNoMes
+    )
+
+    $porDia = @{}
+    foreach ($venda in $Vendas) {
+        $dia = $venda.DataVenda.Day
+        $liquido = $venda.ValorVendaBruta - $venda.ValorCancelado
+        if (-not $porDia.ContainsKey($dia)) { $porDia[$dia] = 0.0 }
+        $porDia[$dia] += $liquido
+    }
+
+    1..$DiasNoMes | ForEach-Object {
+        $dia = $_
+        [pscustomobject]@{
+            Dia         = $dia
+            Faturamento = if ($porDia.ContainsKey($dia)) { [math]::Round($porDia[$dia], 2) } else { 0.0 }
+        }
+    }
+}

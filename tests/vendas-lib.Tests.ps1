@@ -67,3 +67,21 @@ Describe 'Get-ResumoVendas' {
         $resumo.ItensPorVenda | Should -Be 0.0
     }
 }
+
+Describe 'Get-EvolucaoDiaria' {
+    It 'agrupa faturamento por dia do mes' {
+        $vendas = @(
+            [pscustomobject]@{ DataVenda = [datetime]'2026-07-01'; ValorVendaBruta = 100.0; ValorCancelado = 0.0 }
+            [pscustomobject]@{ DataVenda = [datetime]'2026-07-01'; ValorVendaBruta = 50.0;  ValorCancelado = 0.0 }
+            [pscustomobject]@{ DataVenda = [datetime]'2026-07-03'; ValorVendaBruta = 200.0; ValorCancelado = 0.0 }
+        )
+        $evolucao = Get-EvolucaoDiaria -Vendas $vendas -Ano 2026 -Mes 7 -DiasNoMes 3
+
+        $evolucao[0].Dia | Should -Be 1
+        $evolucao[0].Faturamento | Should -Be 150.0
+        $evolucao[1].Dia | Should -Be 2
+        $evolucao[1].Faturamento | Should -Be 0.0
+        $evolucao[2].Dia | Should -Be 3
+        $evolucao[2].Faturamento | Should -Be 200.0
+    }
+}
