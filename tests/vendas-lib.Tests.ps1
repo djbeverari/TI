@@ -85,3 +85,27 @@ Describe 'Get-EvolucaoDiaria' {
         $evolucao[2].Faturamento | Should -Be 200.0
     }
 }
+
+Describe 'Get-VendasPorDiaSemana' {
+    It 'agrupa faturamento por dia da semana (0=domingo a 6=sabado)' {
+        $vendas = @(
+            [pscustomobject]@{ DataVenda = [datetime]'2026-07-08'; ValorVendaBruta = 100.0; ValorCancelado = 0.0 } # quarta
+            [pscustomobject]@{ DataVenda = [datetime]'2026-07-15'; ValorVendaBruta = 50.0;  ValorCancelado = 0.0 } # quarta
+        )
+        $porDia = Get-VendasPorDiaSemana -Vendas $vendas
+        ($porDia | Where-Object DiaSemana -eq 'Quarta-feira').Faturamento | Should -Be 150.0
+    }
+}
+
+Describe 'Get-VendasPorHora' {
+    It 'agrupa faturamento por hora do dia usando DataDigitacao' {
+        $vendas = @(
+            [pscustomobject]@{ DataDigitacao = [datetime]'2026-07-08 10:15:00'; ValorVendaBruta = 100.0; ValorCancelado = 0.0 }
+            [pscustomobject]@{ DataDigitacao = [datetime]'2026-07-08 10:45:00'; ValorVendaBruta = 50.0;  ValorCancelado = 0.0 }
+            [pscustomobject]@{ DataDigitacao = [datetime]'2026-07-08 14:00:00'; ValorVendaBruta = 30.0;  ValorCancelado = 0.0 }
+        )
+        $porHora = Get-VendasPorHora -Vendas $vendas
+        ($porHora | Where-Object Hora -eq 10).Faturamento | Should -Be 150.0
+        ($porHora | Where-Object Hora -eq 14).Faturamento | Should -Be 30.0
+    }
+}

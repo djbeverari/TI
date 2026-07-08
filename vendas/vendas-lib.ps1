@@ -68,3 +68,42 @@ function Get-EvolucaoDiaria {
         }
     }
 }
+
+function Get-VendasPorDiaSemana {
+    param([Parameter(Mandatory)][AllowEmptyCollection()][array]$Vendas)
+
+    $nomes = @('Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado')
+    $porDia = @{}
+    foreach ($venda in $Vendas) {
+        $indice = [int]$venda.DataVenda.DayOfWeek
+        $liquido = $venda.ValorVendaBruta - $venda.ValorCancelado
+        if (-not $porDia.ContainsKey($indice)) { $porDia[$indice] = 0.0 }
+        $porDia[$indice] += $liquido
+    }
+
+    0..6 | ForEach-Object {
+        [pscustomobject]@{
+            DiaSemana   = $nomes[$_]
+            Faturamento = if ($porDia.ContainsKey($_)) { [math]::Round($porDia[$_], 2) } else { 0.0 }
+        }
+    }
+}
+
+function Get-VendasPorHora {
+    param([Parameter(Mandatory)][AllowEmptyCollection()][array]$Vendas)
+
+    $porHora = @{}
+    foreach ($venda in $Vendas) {
+        $hora = $venda.DataDigitacao.Hour
+        $liquido = $venda.ValorVendaBruta - $venda.ValorCancelado
+        if (-not $porHora.ContainsKey($hora)) { $porHora[$hora] = 0.0 }
+        $porHora[$hora] += $liquido
+    }
+
+    0..23 | ForEach-Object {
+        [pscustomobject]@{
+            Hora        = $_
+            Faturamento = if ($porHora.ContainsKey($_)) { [math]::Round($porHora[$_], 2) } else { 0.0 }
+        }
+    }
+}
