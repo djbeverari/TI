@@ -92,14 +92,21 @@ while ($listener.IsListening) {
         }
 
         if ((Test-CaminhoProtegido -UrlPath $urlPath) -and -not (Test-AutenticacaoBasica -AuthorizationHeader $request.Headers["Authorization"])) {
-            $msg = [System.Text.Encoding]::UTF8.GetBytes("<h1>401 - Autenticacao necessaria</h1>")
-            $response.StatusCode = 401
-            $response.Headers.Add("WWW-Authenticate", 'Basic realm="Painel de Vendas"')
-            $response.ContentType = "text/html; charset=utf-8"
-            $response.ContentLength64 = $msg.Length
-            $response.OutputStream.Write($msg, 0, $msg.Length)
-            $response.Close()
-            Write-Host "$(Get-Date -Format 'HH:mm:ss') GET /$urlPath -> 401 (sem autenticacao)" -ForegroundColor Yellow
+            try {
+                $response.Headers.Set("WWW-Authenticate", 'Basic realm="Painel de Vendas"')
+                $msg = [System.Text.Encoding]::UTF8.GetBytes("<h1>401 - Autenticacao necessaria</h1>")
+                $response.ContentType = "text/html; charset=utf-8"
+                $response.StatusCode = 401
+                $response.ContentLength64 = $msg.Length
+                $response.OutputStream.Write($msg, 0, $msg.Length)
+                Write-Host "$(Get-Date -Format 'HH:mm:ss') GET /$urlPath -> 401 (sem autenticacao)" -ForegroundColor Yellow
+            } catch {
+                $erro = $_
+                Write-Host "Erro ao montar resposta 401: $erro" -ForegroundColor Red
+                try { Add-Content -Path (Join-Path $PastaLogs "servidor-http-erros.log") -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ERRO 401: $erro`n$($erro.ScriptStackTrace)" -Encoding UTF8 } catch {}
+            } finally {
+                $response.Close()
+            }
             continue
         }
 
@@ -130,6 +137,8 @@ while ($listener.IsListening) {
         $response.Close()
     }
     catch {
-        Write-Host "Erro na requisicao: $_" -ForegroundColor Red
+        $erro = $_
+        Write-Host "Erro na requisicao: $erro" -ForegroundColor Red
+        try { Add-Content -Path (Join-Path $PastaLogs "servidor-http-erros.log") -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ERRO: $erro`n$($erro.ScriptStackTrace)" -Encoding UTF8 } catch {}
     }
 }
