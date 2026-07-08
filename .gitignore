@@ -1,0 +1,6 @@
+.superpowers/
+
+# Painel de estoque negativos - artefatos gerados e credenciais locais
+painel-negativos/web/
+painel-negativos/estado/
+painel-negativos/.sql_cred_negativos.xml
