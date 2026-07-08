@@ -33,7 +33,7 @@ function Get-ResumoVendas {
         }
     }
 
-    $faturamento = ($Vendas | ForEach-Object { $_.ValorVendaBruta - $_.ValorCancelado } | Measure-Object -Sum).Sum
+    $faturamento = ($Vendas | Measure-Object -Property ValorVendaBruta -Sum).Sum
     $qtdeTotal   = ($Vendas | Measure-Object -Property QtdeTotal -Sum).Sum
 
     [pscustomobject]@{
@@ -55,7 +55,7 @@ function Get-EvolucaoDiaria {
     $porDia = @{}
     foreach ($venda in $Vendas) {
         $dia = $venda.DataVenda.Day
-        $liquido = $venda.ValorVendaBruta - $venda.ValorCancelado
+        $liquido = $venda.ValorVendaBruta
         if (-not $porDia.ContainsKey($dia)) { $porDia[$dia] = 0.0 }
         $porDia[$dia] += $liquido
     }
@@ -76,7 +76,7 @@ function Get-VendasPorDiaSemana {
     $porDia = @{}
     foreach ($venda in $Vendas) {
         $indice = [int]$venda.DataVenda.DayOfWeek
-        $liquido = $venda.ValorVendaBruta - $venda.ValorCancelado
+        $liquido = $venda.ValorVendaBruta
         if (-not $porDia.ContainsKey($indice)) { $porDia[$indice] = 0.0 }
         $porDia[$indice] += $liquido
     }
@@ -95,7 +95,7 @@ function Get-VendasPorHora {
     $porHora = @{}
     foreach ($venda in $Vendas) {
         $hora = $venda.DataDigitacao.Hour
-        $liquido = $venda.ValorVendaBruta - $venda.ValorCancelado
+        $liquido = $venda.ValorVendaBruta
         if (-not $porHora.ContainsKey($hora)) { $porHora[$hora] = 0.0 }
         $porHora[$hora] += $liquido
     }
@@ -117,7 +117,7 @@ function Get-RankingLojas {
     function Agrupar($vendas) {
         $porLoja = @{}
         foreach ($v in $vendas) {
-            $liquido = $v.ValorVendaBruta - $v.ValorCancelado
+            $liquido = $v.ValorVendaBruta
             if (-not $porLoja.ContainsKey($v.CodigoFilial)) { $porLoja[$v.CodigoFilial] = 0.0 }
             $porLoja[$v.CodigoFilial] += $liquido
         }

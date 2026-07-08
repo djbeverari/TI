@@ -40,24 +40,28 @@ Describe 'Get-VariacaoPercentual' {
 
 Describe 'Get-ResumoVendas' {
     BeforeAll {
+        # ValorVendaBruta e ValorCancelado sao mutuamente exclusivos por ticket na retaguarda
+        # (confirmado empiricamente: nenhum ticket tem os dois > 0 - um ticket cancelado ja
+        # aparece com ValorVendaBruta = 0). Por isso o faturamento usa so ValorVendaBruta.
         $vendas = @(
             [pscustomobject]@{ ValorVendaBruta = 100.0; ValorCancelado = 0.0;  QtdeTotal = 2 }
-            [pscustomobject]@{ ValorVendaBruta = 200.0; ValorCancelado = 50.0; QtdeTotal = 3 }
+            [pscustomobject]@{ ValorVendaBruta = 200.0; ValorCancelado = 0.0;  QtdeTotal = 3 }
+            [pscustomobject]@{ ValorVendaBruta = 0.0;   ValorCancelado = 85.0; QtdeTotal = 0 }
             [pscustomobject]@{ ValorVendaBruta = 50.0;  ValorCancelado = 0.0;  QtdeTotal = 1 }
         )
     }
 
-    It 'calcula o faturamento como soma bruta menos cancelado' {
-        (Get-ResumoVendas -Vendas $vendas).Faturamento | Should -Be 300.0
+    It 'calcula o faturamento como soma de ValorVendaBruta, ignorando ValorCancelado' {
+        (Get-ResumoVendas -Vendas $vendas).Faturamento | Should -Be 350.0
     }
-    It 'calcula o numero de vendas (tickets)' {
-        (Get-ResumoVendas -Vendas $vendas).NumeroVendas | Should -Be 3
+    It 'calcula o numero de vendas (tickets), incluindo os cancelados' {
+        (Get-ResumoVendas -Vendas $vendas).NumeroVendas | Should -Be 4
     }
     It 'calcula o ticket medio sobre o faturamento' {
-        (Get-ResumoVendas -Vendas $vendas).TicketMedio | Should -Be 100.0
+        (Get-ResumoVendas -Vendas $vendas).TicketMedio | Should -Be 87.5
     }
     It 'calcula itens por venda' {
-        (Get-ResumoVendas -Vendas $vendas).ItensPorVenda | Should -Be 2.0
+        (Get-ResumoVendas -Vendas $vendas).ItensPorVenda | Should -Be 1.5
     }
     It 'retorna zeros para lista vazia, sem lançar erro' {
         $resumo = Get-ResumoVendas -Vendas @()
