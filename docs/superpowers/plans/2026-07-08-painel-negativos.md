@@ -173,7 +173,7 @@ function Save-NegativosEstado {
     }
 
     $estado = [pscustomobject]@{
-        GeradoEm = $GeradoEm
+        GeradoEm = $GeradoEm.ToString("o")
         Items    = $Items
     }
     $estado | ConvertTo-Json -Depth 5 | Set-Content -Path $Path -Encoding UTF8

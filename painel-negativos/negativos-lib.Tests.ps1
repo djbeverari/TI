@@ -29,3 +29,25 @@ Describe "Get-NegativosData" {
         }
     }
 }
+
+Describe "Save-NegativosEstado / Get-NegativosEstado" {
+    It "salva e recupera itens e timestamp em round-trip" {
+        $path = Join-Path $TestDrive "estado.json"
+        $itens = @(
+            [pscustomobject]@{ loja = 3; produto = "Camiseta P Azul"; codigo = "10234"; quantidade = -2; data = [datetime]"2026-07-07" }
+        )
+        $geradoEm = [datetime]"2026-07-08T11:05:00"
+
+        Save-NegativosEstado -Items $itens -GeradoEm $geradoEm -Path $path
+        $estado = Get-NegativosEstado -Path $path
+
+        $estado.Items.Count | Should -Be 1
+        $estado.Items[0].produto | Should -Be "Camiseta P Azul"
+        [datetime]$estado.GeradoEm | Should -Be $geradoEm
+    }
+
+    It "retorna `$null quando o arquivo de estado ainda não existe" {
+        $path = Join-Path $TestDrive "nao-existe.json"
+        Get-NegativosEstado -Path $path | Should -BeNullOrEmpty
+    }
+}
