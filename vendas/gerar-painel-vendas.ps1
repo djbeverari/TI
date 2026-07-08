@@ -75,26 +75,41 @@ $html = @"
 <meta charset="UTF-8">
 <title>Painel de Vendas - Rede Dorinhos</title>
 <style>
-  body { font-family: Segoe UI, Arial, sans-serif; margin: 20px; background: #f5f5f5; }
-  .periodo { background: #fff8e1; border: 1px solid #ffe082; border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; font-size: 13px; color: #6d4c00; }
+  :root {
+    --navy: #1e2152;
+    --red: #c80022;
+    --gold: #fcc700;
+  }
+  body { font-family: Segoe UI, Arial, sans-serif; margin: 0; background: #f2f2f6; color: #222; }
+  .topbar { background: var(--navy); color: white; padding: 22px 24px; border-bottom: 4px solid var(--gold); }
+  .topbar h1 { margin: 0; font-size: 22px; font-weight: 600; }
+  .topbar #atualizado { margin: 4px 0 0 0; font-size: 12px; color: #cfd1e6; }
+  .conteudo { padding: 20px 24px; }
+  h2 { color: var(--navy); border-bottom: 2px solid var(--gold); padding-bottom: 4px; display: inline-block; }
+  .periodo { background: #fff8e0; border: 1px solid var(--gold); border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; font-size: 13px; color: #6d5600; }
   .cards { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
-  .card { flex: 1; min-width: 180px; background: white; border-radius: 8px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  .card { flex: 1; min-width: 180px; background: white; border-radius: 8px; padding: 14px; border-top: 3px solid var(--gold); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
   .card .label { font-size: 12px; color: #888; text-transform: uppercase; }
-  .card h3 { margin: 4px 0; }
+  .card h3 { margin: 4px 0; color: var(--navy); }
   .card .comparacao { font-size: 12px; display: block; margin-top: 2px; }
   table { width: 100%; border-collapse: collapse; background: white; margin-bottom: 20px; }
-  th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid #eee; }
-  .up { color: #2e7d32; } .down { color: #c62828; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #eee; }
+  thead th { background: var(--navy); color: white; font-weight: 500; }
+  #ranking tbody tr:hover { background: #fff8e0; }
+  .up { color: var(--navy); font-weight: 600; } .down { color: var(--red); font-weight: 600; }
   canvas { background: white; border-radius: 8px; }
   .legenda { display: flex; gap: 16px; margin: 6px 0 14px 0; font-size: 12px; color: #555; }
   .legenda span { display: inline-flex; align-items: center; gap: 5px; }
   .swatch { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
-  #detalheLoja { background: white; border-radius: 8px; padding: 14px; margin-bottom: 20px; min-height: 20px; }
+  #detalheLoja { background: white; border-radius: 8px; padding: 14px; margin-bottom: 20px; min-height: 20px; border-left: 4px solid var(--gold); }
 </style>
 </head>
 <body>
+<div class="topbar">
 <h1>Painel de Vendas — Rede Dorinhos</h1>
 <p id="atualizado"></p>
+</div>
+<div class="conteudo">
 <div class="periodo" id="periodo"></div>
 <div class="cards" id="cards"></div>
 <h2>Ranking de Lojas</h2>
@@ -108,8 +123,8 @@ $html = @"
 <table id="categorias"><thead><tr><th>Categoria</th><th>%</th></tr></thead><tbody></tbody></table>
 <h2>Evolução Diária (mês atual x mês anterior, dia a dia)</h2>
 <div class="legenda">
-  <span><span class="swatch" style="background:#1e88e5"></span>Mês atual</span>
-  <span><span class="swatch" style="background:#bbbbbb"></span>Mês anterior</span>
+  <span><span class="swatch" style="background:#1e2152"></span>Mês atual</span>
+  <span><span class="swatch" style="background:#fcc700"></span>Mês anterior</span>
 </div>
 <canvas id="graficoEvolucao" width="900" height="220"></canvas>
 <h2>Vendas por Dia da Semana</h2>
@@ -235,19 +250,19 @@ function desenharLinhasComparativas(canvasId, labelsX, serieAtual, serieAnterior
         ctx.stroke();
         ctx.setLineDash([]);
     }
-    linha(serieAnterior, '#bbbbbb', true);
-    linha(serieAtual, '#1e88e5', false);
+    linha(serieAnterior, '#fcc700', true);
+    linha(serieAtual, '#1e2152', false);
 
     if (diaAtual && diaAtual > 0 && diaAtual <= labelsX.length) {
         const xHoje = (diaAtual - 1) * passoX;
-        ctx.strokeStyle = '#e53935';
+        ctx.strokeStyle = '#c80022';
         ctx.setLineDash([3, 3]);
         ctx.beginPath();
         ctx.moveTo(xHoje, margemSuperior);
         ctx.lineTo(xHoje, canvas.height - margemInferior);
         ctx.stroke();
         ctx.setLineDash([]);
-        ctx.fillStyle = '#e53935';
+        ctx.fillStyle = '#c80022';
         ctx.font = '10px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText('hoje', xHoje, margemSuperior - 4);
@@ -271,8 +286,8 @@ desenharLinhasComparativas(
     dados.EvolucaoAnterior.map(d => d.Faturamento),
     dados.DiaAtual
 );
-desenharBarras('graficoDiaSemana', dados.PorDiaSemana.map(d => d.DiaSemana.substring(0,3)), dados.PorDiaSemana.map(d => d.Faturamento), '#43a047', 7);
-desenharBarras('graficoHora', dados.PorHora.map(d => d.Hora + 'h'), dados.PorHora.map(d => d.Faturamento), '#fb8c00', 12);
+desenharBarras('graficoDiaSemana', dados.PorDiaSemana.map(d => d.DiaSemana.substring(0,3)), dados.PorDiaSemana.map(d => d.Faturamento), '#1e2152', 7);
+desenharBarras('graficoHora', dados.PorHora.map(d => d.Hora + 'h'), dados.PorHora.map(d => d.Faturamento), '#fcc700', 12);
 
 document.querySelectorAll('#ranking tbody tr').forEach((tr, i) => {
     tr.style.cursor = 'pointer';
@@ -286,6 +301,7 @@ document.querySelectorAll('#ranking tbody tr').forEach((tr, i) => {
     });
 });
 </script>
+</div>
 </body>
 </html>
 "@
