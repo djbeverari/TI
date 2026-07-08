@@ -98,7 +98,11 @@ while ($listener.IsListening) {
 
         if ((Test-CaminhoProtegido -UrlPath $urlPath) -and -not (Test-AutenticacaoBasica -AuthorizationHeader $request.Headers["Authorization"])) {
             try {
-                $response.Headers.Set("WWW-Authenticate", 'Basic realm="Painel de Vendas"')
+                # Add(nome, valor) e Set(nome, valor) sao bloqueados pelo .NET para o header
+                # WWW-Authenticate num HttpListenerResponse ("deve ser modificado com a
+                # propriedade ou metodo adequado"). A forma de string unica "Nome: Valor"
+                # usa outro caminho de validacao e funciona.
+                $response.Headers.Add('WWW-Authenticate: Basic realm="Painel de Vendas"')
                 $msg = [System.Text.Encoding]::UTF8.GetBytes("<h1>401 - Autenticacao necessaria</h1>")
                 $response.ContentType = "text/html; charset=utf-8"
                 $response.StatusCode = 401
