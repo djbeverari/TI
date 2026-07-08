@@ -1,4 +1,4 @@
-. "$PSScriptRoot\conexao-retaguarda.ps1"
+﻿. "$PSScriptRoot\conexao-retaguarda.ps1"
 
 function Get-VendasMes {
     param(

@@ -1,4 +1,4 @@
-function Format-CodigoFilial {
+﻿function Format-CodigoFilial {
     param([Parameter(Mandatory)]$Numero)
     "{0:D6}" -f [int]$Numero
 }
