@@ -138,3 +138,35 @@ function Get-RankingLojas {
         }
     } | Sort-Object Faturamento -Descending
 }
+
+function Get-TopProdutos {
+    param(
+        [Parameter(Mandatory)][AllowEmptyCollection()][array]$Itens,
+        [int]$TopN = 10
+    )
+
+    $Itens | Group-Object Produto | ForEach-Object {
+        [pscustomobject]@{
+            Produto     = $_.Name
+            DescProduto = $_.Group[0].DescProduto
+            Quantidade  = ($_.Group | Measure-Object -Property Qtde -Sum).Sum
+            Receita     = [math]::Round(($_.Group | Measure-Object -Property ValorTotal -Sum).Sum, 2)
+        }
+    } | Sort-Object Receita -Descending | Select-Object -First $TopN
+}
+
+function Get-MixCategoria {
+    param([Parameter(Mandatory)][AllowEmptyCollection()][array]$Itens)
+
+    $totalGeral = ($Itens | Measure-Object -Property ValorTotal -Sum).Sum
+    if (-not $totalGeral) { return @() }
+
+    $Itens | Group-Object GrupoProduto | ForEach-Object {
+        $totalCategoria = ($_.Group | Measure-Object -Property ValorTotal -Sum).Sum
+        [pscustomobject]@{
+            Categoria             = $_.Name
+            Faturamento           = [math]::Round($totalCategoria, 2)
+            PercentualFaturamento = [math]::Round(($totalCategoria / $totalGeral) * 100, 2)
+        }
+    } | Sort-Object PercentualFaturamento -Descending
+}

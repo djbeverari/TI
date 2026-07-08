@@ -136,3 +136,35 @@ Describe 'Get-RankingLojas' {
         $ranking[0].VariacaoPercentual | Should -Be 100.0
     }
 }
+
+Describe 'Get-TopProdutos' {
+    It 'ordena produtos por receita decrescente e limita ao TopN' {
+        $itens = @(
+            [pscustomobject]@{ Produto = 'A'; DescProduto = 'Produto A'; Qtde = 5; ValorTotal = 100.0 }
+            [pscustomobject]@{ Produto = 'A'; DescProduto = 'Produto A'; Qtde = 2; ValorTotal = 40.0 }
+            [pscustomobject]@{ Produto = 'B'; DescProduto = 'Produto B'; Qtde = 10; ValorTotal = 500.0 }
+        )
+        $top = Get-TopProdutos -Itens $itens -TopN 2
+
+        $top.Count | Should -Be 2
+        $top[0].Produto | Should -Be 'B'
+        $top[0].Receita | Should -Be 500.0
+        $top[1].Produto | Should -Be 'A'
+        $top[1].Receita | Should -Be 140.0
+        $top[1].Quantidade | Should -Be 7
+    }
+}
+
+Describe 'Get-MixCategoria' {
+    It 'calcula o percentual de faturamento por categoria' {
+        $itens = @(
+            [pscustomobject]@{ GrupoProduto = 'Calçados';  ValorTotal = 300.0 }
+            [pscustomobject]@{ GrupoProduto = 'Vestuário'; ValorTotal = 100.0 }
+            [pscustomobject]@{ GrupoProduto = 'Calçados';  ValorTotal = 100.0 }
+        )
+        $mix = Get-MixCategoria -Itens $itens
+
+        ($mix | Where-Object Categoria -eq 'Calçados').PercentualFaturamento | Should -Be 80.0
+        ($mix | Where-Object Categoria -eq 'Vestuário').PercentualFaturamento | Should -Be 20.0
+    }
+}
