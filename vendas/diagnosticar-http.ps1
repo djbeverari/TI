@@ -60,7 +60,7 @@ Invoke-Command -Session $session -ScriptBlock {
 
     Write-Host ""
     Write-Host "=== 6. Log de debug (ultimas 10 linhas) ===" -ForegroundColor Cyan
-    $debugLog = "C:\Logs\DataSync\servidor-http-debug.log"
+    $debugLog = "C:\Users\Datasync\Desktop\ti\servidor-http-debug.log"
     if (Test-Path $debugLog) {
         Get-Content $debugLog -Tail 10 -Encoding UTF8
     } else {
@@ -69,7 +69,7 @@ Invoke-Command -Session $session -ScriptBlock {
 
     Write-Host ""
     Write-Host "=== 7. Log de erros (ultimas 10 linhas) ===" -ForegroundColor Cyan
-    $errosLog = "C:\Logs\DataSync\servidor-http-erros.log"
+    $errosLog = "C:\Users\Datasync\Desktop\ti\servidor-http-erros.log"
     if (Test-Path $errosLog) {
         Get-Content $errosLog -Tail 10 -Encoding UTF8
     } else {
