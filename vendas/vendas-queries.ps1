@@ -8,18 +8,18 @@ function Get-VendasMes {
     $inicio = Get-Date -Year $Ano -Month $Mes -Day 1
     $fim    = $inicio.AddMonths(1).AddDays(-1)
     $query = @"
-SELECT CODIGO_FILIAL, DATA_VENDA, DATA_DIGITACAO, VALOR_VENDA_BRUTA, VALOR_CANCELADO, QTDE_TOTAL
+SELECT CODIGO_FILIAL, DATA_VENDA, DATA_DIGITACAO, VALOR_TIKET, VALOR_CANCELADO, QTDE_TOTAL
 FROM loja_venda
 WHERE DATA_VENDA BETWEEN '$(Format-DataSql $inicio)' AND '$(Format-DataSql $fim)'
 "@
     Invoke-QueryRetaguarda -Query $query | ForEach-Object {
         [pscustomobject]@{
-            CodigoFilial    = $_.CODIGO_FILIAL
-            DataVenda       = [datetime]$_.DATA_VENDA
-            DataDigitacao   = [datetime]$_.DATA_DIGITACAO
-            ValorVendaBruta = [double]$_.VALOR_VENDA_BRUTA
-            ValorCancelado  = [double]$_.VALOR_CANCELADO
-            QtdeTotal       = [int]$_.QTDE_TOTAL
+            CodigoFilial   = $_.CODIGO_FILIAL
+            DataVenda      = [datetime]$_.DATA_VENDA
+            DataDigitacao  = [datetime]$_.DATA_DIGITACAO
+            ValorTiket     = [double]$_.VALOR_TIKET
+            ValorCancelado = [double]$_.VALOR_CANCELADO
+            QtdeTotal      = [int]$_.QTDE_TOTAL
         }
     }
 }

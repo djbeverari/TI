@@ -40,18 +40,18 @@ Describe 'Get-VariacaoPercentual' {
 
 Describe 'Get-ResumoVendas' {
     BeforeAll {
-        # ValorVendaBruta e ValorCancelado sao mutuamente exclusivos por ticket na retaguarda
+        # ValorTiket e ValorCancelado sao mutuamente exclusivos por ticket na retaguarda
         # (confirmado empiricamente: nenhum ticket tem os dois > 0 - um ticket cancelado ja
-        # aparece com ValorVendaBruta = 0). Por isso o faturamento usa so ValorVendaBruta.
+        # aparece com ValorTiket = 0). Por isso o faturamento usa so ValorTiket.
         $vendas = @(
-            [pscustomobject]@{ ValorVendaBruta = 100.0; ValorCancelado = 0.0;  QtdeTotal = 2 }
-            [pscustomobject]@{ ValorVendaBruta = 200.0; ValorCancelado = 0.0;  QtdeTotal = 3 }
-            [pscustomobject]@{ ValorVendaBruta = 0.0;   ValorCancelado = 85.0; QtdeTotal = 0 }
-            [pscustomobject]@{ ValorVendaBruta = 50.0;  ValorCancelado = 0.0;  QtdeTotal = 1 }
+            [pscustomobject]@{ ValorTiket = 100.0; ValorCancelado = 0.0;  QtdeTotal = 2 }
+            [pscustomobject]@{ ValorTiket = 200.0; ValorCancelado = 0.0;  QtdeTotal = 3 }
+            [pscustomobject]@{ ValorTiket = 0.0;   ValorCancelado = 85.0; QtdeTotal = 0 }
+            [pscustomobject]@{ ValorTiket = 50.0;  ValorCancelado = 0.0;  QtdeTotal = 1 }
         )
     }
 
-    It 'calcula o faturamento como soma de ValorVendaBruta, ignorando ValorCancelado' {
+    It 'calcula o faturamento como soma de ValorTiket, ignorando ValorCancelado' {
         (Get-ResumoVendas -Vendas $vendas).Faturamento | Should -Be 350.0
     }
     It 'calcula o numero de vendas (tickets), incluindo os cancelados' {
@@ -75,9 +75,9 @@ Describe 'Get-ResumoVendas' {
 Describe 'Get-EvolucaoDiaria' {
     It 'agrupa faturamento por dia do mes' {
         $vendas = @(
-            [pscustomobject]@{ DataVenda = [datetime]'2026-07-01'; ValorVendaBruta = 100.0; ValorCancelado = 0.0 }
-            [pscustomobject]@{ DataVenda = [datetime]'2026-07-01'; ValorVendaBruta = 50.0;  ValorCancelado = 0.0 }
-            [pscustomobject]@{ DataVenda = [datetime]'2026-07-03'; ValorVendaBruta = 200.0; ValorCancelado = 0.0 }
+            [pscustomobject]@{ DataVenda = [datetime]'2026-07-01'; ValorTiket = 100.0; ValorCancelado = 0.0 }
+            [pscustomobject]@{ DataVenda = [datetime]'2026-07-01'; ValorTiket = 50.0;  ValorCancelado = 0.0 }
+            [pscustomobject]@{ DataVenda = [datetime]'2026-07-03'; ValorTiket = 200.0; ValorCancelado = 0.0 }
         )
         $evolucao = Get-EvolucaoDiaria -Vendas $vendas -Ano 2026 -Mes 7 -DiasNoMes 3
 
@@ -93,8 +93,8 @@ Describe 'Get-EvolucaoDiaria' {
 Describe 'Get-VendasPorDiaSemana' {
     It 'agrupa faturamento por dia da semana (0=domingo a 6=sabado)' {
         $vendas = @(
-            [pscustomobject]@{ DataVenda = [datetime]'2026-07-08'; ValorVendaBruta = 100.0; ValorCancelado = 0.0 } # quarta
-            [pscustomobject]@{ DataVenda = [datetime]'2026-07-15'; ValorVendaBruta = 50.0;  ValorCancelado = 0.0 } # quarta
+            [pscustomobject]@{ DataVenda = [datetime]'2026-07-08'; ValorTiket = 100.0; ValorCancelado = 0.0 } # quarta
+            [pscustomobject]@{ DataVenda = [datetime]'2026-07-15'; ValorTiket = 50.0;  ValorCancelado = 0.0 } # quarta
         )
         $porDia = Get-VendasPorDiaSemana -Vendas $vendas
         ($porDia | Where-Object DiaSemana -eq 'Quarta-feira').Faturamento | Should -Be 150.0
@@ -104,9 +104,9 @@ Describe 'Get-VendasPorDiaSemana' {
 Describe 'Get-VendasPorHora' {
     It 'agrupa faturamento por hora do dia usando DataDigitacao' {
         $vendas = @(
-            [pscustomobject]@{ DataDigitacao = [datetime]'2026-07-08 10:15:00'; ValorVendaBruta = 100.0; ValorCancelado = 0.0 }
-            [pscustomobject]@{ DataDigitacao = [datetime]'2026-07-08 10:45:00'; ValorVendaBruta = 50.0;  ValorCancelado = 0.0 }
-            [pscustomobject]@{ DataDigitacao = [datetime]'2026-07-08 14:00:00'; ValorVendaBruta = 30.0;  ValorCancelado = 0.0 }
+            [pscustomobject]@{ DataDigitacao = [datetime]'2026-07-08 10:15:00'; ValorTiket = 100.0; ValorCancelado = 0.0 }
+            [pscustomobject]@{ DataDigitacao = [datetime]'2026-07-08 10:45:00'; ValorTiket = 50.0;  ValorCancelado = 0.0 }
+            [pscustomobject]@{ DataDigitacao = [datetime]'2026-07-08 14:00:00'; ValorTiket = 30.0;  ValorCancelado = 0.0 }
         )
         $porHora = Get-VendasPorHora -Vendas $vendas
         ($porHora | Where-Object Hora -eq 10).Faturamento | Should -Be 150.0
@@ -117,12 +117,12 @@ Describe 'Get-VendasPorHora' {
 Describe 'Get-RankingLojas' {
     It 'ordena lojas por faturamento decrescente com variacao vs mes anterior' {
         $atual = @(
-            [pscustomobject]@{ CodigoFilial = '000012'; ValorVendaBruta = 200.0; ValorCancelado = 0.0 }
-            [pscustomobject]@{ CodigoFilial = '000004'; ValorVendaBruta = 300.0; ValorCancelado = 0.0 }
+            [pscustomobject]@{ CodigoFilial = '000012'; ValorTiket = 200.0; ValorCancelado = 0.0 }
+            [pscustomobject]@{ CodigoFilial = '000004'; ValorTiket = 300.0; ValorCancelado = 0.0 }
         )
         $anterior = @(
-            [pscustomobject]@{ CodigoFilial = '000012'; ValorVendaBruta = 100.0; ValorCancelado = 0.0 }
-            [pscustomobject]@{ CodigoFilial = '000004'; ValorVendaBruta = 300.0; ValorCancelado = 0.0 }
+            [pscustomobject]@{ CodigoFilial = '000012'; ValorTiket = 100.0; ValorCancelado = 0.0 }
+            [pscustomobject]@{ CodigoFilial = '000004'; ValorTiket = 300.0; ValorCancelado = 0.0 }
         )
         $ranking = Get-RankingLojas -VendasAtual $atual -VendasAnterior $anterior
 
@@ -134,7 +134,7 @@ Describe 'Get-RankingLojas' {
     }
 
     It 'inclui loja que so vendeu no mes atual (variacao 100%)' {
-        $atual = @([pscustomobject]@{ CodigoFilial = '000995'; ValorVendaBruta = 50.0; ValorCancelado = 0.0 })
+        $atual = @([pscustomobject]@{ CodigoFilial = '000995'; ValorTiket = 50.0; ValorCancelado = 0.0 })
         $anterior = @()
         $ranking = Get-RankingLojas -VendasAtual $atual -VendasAnterior $anterior
         $ranking[0].VariacaoPercentual | Should -Be 100.0
