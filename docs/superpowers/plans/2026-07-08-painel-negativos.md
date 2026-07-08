@@ -590,4 +590,10 @@ O schema assumido no plano original (`loja, produto, codigo, quantidade, data`) 
 - **Trim nos campos de texto**: `filial`/`produto` vêm com espaços à direita (varchar de largura fixa) — `New-PainelHtml` corta antes de exibir e usar no filtro de busca.
 - **SSL:** o módulo `SqlServer` mais novo (22.x) usa `Encrypt=Mandatory` por padrão; o servidor da retaguarda tem certificado autoassinado, então `Invoke-Sqlcmd` precisa de `-TrustServerCertificate`.
 - **Encoding:** `negativos-lib.ps1` precisa ser salvo com **BOM UTF-8** — sem BOM, o PowerShell 5.1 lê os acentos (`Código`, etc.) errado ao fazer dot-source do arquivo, gerando caracteres corrompidos no HTML gerado.
+
+## Ajustes pós-deploy (2026-07-08)
+
+- **Dashboard:** adicionados dois rankings em gráfico de barra (lojas e produtos), ordenados pela soma das quantidades negativas — ver funções `Get-Ranking` e `ConvertTo-BarrasHtml` em `negativos-lib.ps1`.
+- **Agendamento corrigido para semanal:** a tabela `estoque_negativos` só é regerada 1x por semana (sempre sexta-feira, ~12:00, confirmado pelas `data_geracao` distintas). Rodar o painel seg-sex só repetia os mesmos dados — `instala-tarefa.ps1` foi trocado de `-Weekly -DaysOfWeek Monday,Tuesday,Wednesday,Thursday,Friday -At "11:05AM"` para `-Weekly -DaysOfWeek Friday -At "13:00"`.
+- **Porta do http.server:** 8081 já estava em uso por outro serviço na máquina da Daniella; o painel usa **8082**.
 ```

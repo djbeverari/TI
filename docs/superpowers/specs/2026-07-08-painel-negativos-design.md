@@ -15,7 +15,7 @@ Existe uma tabela `estoque_negativos` no banco da retaguarda (Linx) que traz os 
 ## Solução
 
 Script PowerShell agendado via Task Scheduler que:
-1. Roda de segunda a sexta, logo após 11:00
+1. Roda 1x por semana, sexta-feira às 13:00 (a origem `estoque_negativos` só é regerada semanalmente, às sextas ~12:00 — rodar todo dia útil só repetiria os mesmos dados)
 2. Conecta direto na retaguarda (SQL Server) a partir da máquina da Daniella
 3. Consulta a tabela `estoque_negativos` (já vem filtrada, só itens negativos)
 4. Gera um painel HTML acessível via `http://<ip-da-maquina-da-daniella>:8082`
@@ -25,7 +25,7 @@ Script PowerShell agendado via Task Scheduler que:
 ## Arquitetura
 
 ```
-[Task Scheduler, seg-sex ~11:00] → [gera-painel-negativos.ps1]
+[Task Scheduler, sexta-feira 13:00] → [gera-painel-negativos.ps1]
                                         │
                                         ├── Conecta na retaguarda (192.168.0.55, Dorinhos_2022)
                                         ├── SELECT * FROM estoque_negativos ORDER BY quantidade ASC
@@ -103,7 +103,7 @@ ORDER BY quantidade ASC
 
 ## Agendamento (Task Scheduler)
 
-- **Trigger:** diário, segunda a sexta, logo após 11:00
+- **Trigger:** semanal, sexta-feira às 13:00 (após a atualização semanal da tabela de origem)
 - **Ação:** executar `gera-painel-negativos.ps1`
 - **Conta:** conta da Daniella (acesso direto à retaguarda já confirmado)
 
