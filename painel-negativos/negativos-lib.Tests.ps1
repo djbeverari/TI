@@ -56,6 +56,40 @@ Describe "Save-NegativosEstado / Get-NegativosEstado" {
     }
 }
 
+Describe "Get-Ranking" {
+    BeforeAll {
+        $itensExemplo = @(
+            [pscustomobject]@{ loja = "LOJA 07"; codigo = "11902"; grade = 6; quantidade = -5; data = [datetime]"2026-07-07" }
+            [pscustomobject]@{ loja = "LOJA 07"; codigo = "10234"; grade = 2; quantidade = -1; data = [datetime]"2026-07-07" }
+            [pscustomobject]@{ loja = "LOJA 03"; codigo = "10234"; grade = 3; quantidade = -2; data = [datetime]"2026-07-07" }
+        )
+    }
+
+    It "agrupa por loja e soma as quantidades negativas, mais severo primeiro" {
+        $ranking = Get-Ranking -Items $itensExemplo -Chave "loja"
+
+        $ranking.Count | Should -Be 2
+        $ranking[0].Chave | Should -Be "LOJA 07"
+        $ranking[0].Soma | Should -Be -6
+        $ranking[1].Chave | Should -Be "LOJA 03"
+        $ranking[1].Soma | Should -Be -2
+    }
+
+    It "agrupa por codigo e soma as quantidades negativas, mais severo primeiro" {
+        $ranking = Get-Ranking -Items $itensExemplo -Chave "codigo"
+
+        $ranking.Count | Should -Be 2
+        $ranking[0].Chave | Should -Be "11902"
+        $ranking[0].Soma | Should -Be -5
+        $ranking[1].Chave | Should -Be "10234"
+        $ranking[1].Soma | Should -Be -3
+    }
+
+    It "retorna lista vazia quando nao ha itens" {
+        Get-Ranking -Items @() -Chave "loja" | Should -BeNullOrEmpty
+    }
+}
+
 Describe "New-PainelHtml" {
     BeforeAll {
         $itensExemplo = @(
@@ -85,5 +119,21 @@ Describe "New-PainelHtml" {
         $html = New-PainelHtml -Items @() -GeradoEm ([datetime]"2026-07-08T11:05:00") -Desatualizado $false
 
         $html | Should -Match "Total de itens.*0"
+    }
+
+    It "inclui o ranking de lojas e de produtos por soma de quantidade negativa" {
+        $html = New-PainelHtml -Items $itensExemplo -GeradoEm ([datetime]"2026-07-08T11:05:00") -Desatualizado $false
+
+        $html | Should -Match "Ranking de lojas"
+        $html | Should -Match "Ranking de produtos"
+        $html | Should -Match "class='barra'"
+        $html | Should -Match "LOJA 07 - CENTRO"
+        $html | Should -Match "11902"
+    }
+
+    It "nao quebra o ranking quando nao ha itens" {
+        $html = New-PainelHtml -Items @() -GeradoEm ([datetime]"2026-07-08T11:05:00") -Desatualizado $false
+
+        $html | Should -Match "Ranking de lojas"
     }
 }

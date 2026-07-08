@@ -47,6 +47,45 @@ function Get-NegativosEstado {
     Get-Content -Path $Path -Raw | ConvertFrom-Json
 }
 
+function Get-Ranking {
+    param(
+        [array]$Items = @(),
+        [Parameter(Mandatory)] [string]$Chave
+    )
+
+    if (-not $Items -or $Items.Count -eq 0) {
+        return @()
+    }
+
+    $Items | Group-Object -Property $Chave | ForEach-Object {
+        [pscustomobject]@{
+            Chave = $_.Name
+            Soma  = ($_.Group | Measure-Object -Property quantidade -Sum).Sum
+        }
+    } | Sort-Object Soma
+}
+
+function ConvertTo-BarrasHtml {
+    param(
+        [array]$Ranking = @()
+    )
+
+    if (-not $Ranking -or $Ranking.Count -eq 0) {
+        return "<p class='vazio'>Sem itens negativos.</p>"
+    }
+
+    $top = $Ranking | Select-Object -First 10
+    $maxAbs = ($top | ForEach-Object { [math]::Abs($_.Soma) } | Measure-Object -Maximum).Maximum
+    if (-not $maxAbs -or $maxAbs -eq 0) { $maxAbs = 1 }
+
+    $linhas = $top | ForEach-Object {
+        $pct = [math]::Round(([math]::Abs($_.Soma) / $maxAbs) * 100)
+        $label = [System.Web.HttpUtility]::HtmlEncode([string]$_.Chave)
+        "<div class='barra-linha'><span class='barra-label'>$label</span><div class='barra-fundo'><div class='barra' style='width:${pct}%'></div></div><span class='barra-valor'>$($_.Soma)</span></div>"
+    }
+    ($linhas -join "`n")
+}
+
 function New-PainelHtml {
     param(
         [array]$Items = @(),
@@ -80,6 +119,9 @@ function New-PainelHtml {
     }
     $linhasHtml = ($linhas -join "`n")
 
+    $barrasLojasHtml = ConvertTo-BarrasHtml -Ranking (Get-Ranking -Items $itensLimpos -Chave "loja")
+    $barrasProdutosHtml = ConvertTo-BarrasHtml -Ranking (Get-Ranking -Items $itensLimpos -Chave "codigo")
+
     @"
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -91,6 +133,15 @@ body { font-family: Segoe UI, Arial, sans-serif; margin: 20px; background: #f4f4
 .resumo { display: flex; gap: 16px; margin-bottom: 12px; }
 .resumo div { background: white; padding: 10px 16px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
 .aviso { background: #fff3cd; color: #856404; padding: 10px; border-radius: 6px; margin-bottom: 12px; font-weight: bold; }
+.rankings { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+.ranking-box { background: white; padding: 12px 16px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.15); flex: 1; min-width: 300px; }
+.ranking-box h2 { margin: 0 0 10px 0; font-size: 15px; }
+.barra-linha { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 13px; }
+.barra-label { width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.barra-fundo { flex: 1; background: #eee; border-radius: 3px; height: 14px; overflow: hidden; }
+.barra { background: #c0392b; height: 100%; }
+.barra-valor { width: 40px; text-align: right; color: #c0392b; font-weight: bold; }
+.vazio { color: #777; font-size: 13px; }
 input#busca { width: 100%; padding: 8px; margin-bottom: 12px; box-sizing: border-box; }
 table { width: 100%; border-collapse: collapse; background: white; }
 th, td { padding: 8px; border-bottom: 1px solid #ddd; text-align: left; }
@@ -105,6 +156,16 @@ $avisoHtml
 <div class="resumo">
 <div>Total de itens: <b>$totalItens</b></div>
 <div>Lojas afetadas: <b>$lojasAfetadas</b></div>
+</div>
+<div class="rankings">
+<div class="ranking-box">
+<h2>Ranking de lojas (soma da quantidade negativa)</h2>
+$barrasLojasHtml
+</div>
+<div class="ranking-box">
+<h2>Ranking de produtos (soma da quantidade negativa)</h2>
+$barrasProdutosHtml
+</div>
 </div>
 <input id="busca" type="text" placeholder="Filtrar por loja ou código do produto...">
 <table id="tabela">
