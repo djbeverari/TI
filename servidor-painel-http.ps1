@@ -13,6 +13,17 @@ param(
 # continuam sem senha.
 $PadroesProtegidos = @('vendas*')
 
+function Set-CabecalhoSemValidacao {
+    # HttpListenerResponse bloqueia Headers.Add/Set(nome, valor) e mesmo
+    # Add("Nome: Valor") para o header WWW-Authenticate ("deve ser
+    # modificado com a propriedade ou metodo adequado"). AddWithoutValidate
+    # (metodo interno do WebHeaderCollection) contorna essa checagem - e o
+    # workaround padrao conhecido para esse problema do .NET.
+    param($Response, [string]$Nome, [string]$Valor)
+    $metodo = $Response.Headers.GetType().GetMethod('AddWithoutValidate', [System.Reflection.BindingFlags]'NonPublic,Instance')
+    $metodo.Invoke($Response.Headers, @($Nome, $Valor))
+}
+
 function Test-CaminhoProtegido {
     param([string]$UrlPath)
     foreach ($padrao in $PadroesProtegidos) {
@@ -98,11 +109,7 @@ while ($listener.IsListening) {
 
         if ((Test-CaminhoProtegido -UrlPath $urlPath) -and -not (Test-AutenticacaoBasica -AuthorizationHeader $request.Headers["Authorization"])) {
             try {
-                # Add(nome, valor) e Set(nome, valor) sao bloqueados pelo .NET para o header
-                # WWW-Authenticate num HttpListenerResponse ("deve ser modificado com a
-                # propriedade ou metodo adequado"). A forma de string unica "Nome: Valor"
-                # usa outro caminho de validacao e funciona.
-                $response.Headers.Add('WWW-Authenticate: Basic realm="Painel de Vendas"')
+                Set-CabecalhoSemValidacao -Response $response -Nome 'WWW-Authenticate' -Valor 'Basic realm="Painel de Vendas"'
                 $msg = [System.Text.Encoding]::UTF8.GetBytes("<h1>401 - Autenticacao necessaria</h1>")
                 $response.ContentType = "text/html; charset=utf-8"
                 $response.StatusCode = 401
