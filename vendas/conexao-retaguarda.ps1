@@ -13,6 +13,9 @@ function Get-CredencialRetaguarda {
 }
 
 function Invoke-QueryRetaguarda {
+    # Usa System.Data.SqlClient diretamente (parte do .NET Framework, sem
+    # depender do modulo SqlServer/Invoke-Sqlcmd - o servidor de automacao
+    # (192.168.0.147) nao tem esse modulo instalado).
     param(
         [Parameter(Mandatory)][string]$Query,
         [string]$ServidorRetaguarda = "192.168.0.55",
@@ -20,10 +23,18 @@ function Invoke-QueryRetaguarda {
     )
     $cred = Get-CredencialRetaguarda
     $senha = $cred.GetNetworkCredential().Password
-    Invoke-Sqlcmd -ServerInstance $ServidorRetaguarda `
-                   -Database $BancoRetaguarda `
-                   -Username $cred.UserName `
-                   -Password $senha `
-                   -TrustServerCertificate `
-                   -Query $Query
+    $connectionString = "Server=$ServidorRetaguarda;Database=$BancoRetaguarda;User Id=$($cred.UserName);Password=$senha;TrustServerCertificate=True;"
+
+    $connection = New-Object System.Data.SqlClient.SqlConnection $connectionString
+    try {
+        $connection.Open()
+        $command = New-Object System.Data.SqlClient.SqlCommand $Query, $connection
+        $command.CommandTimeout = 60
+        $adapter = New-Object System.Data.SqlClient.SqlDataAdapter $command
+        $table = New-Object System.Data.DataTable
+        [void]$adapter.Fill($table)
+        $table.Rows
+    } finally {
+        $connection.Close()
+    }
 }
