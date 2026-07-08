@@ -14,8 +14,8 @@ Describe "Get-NegativosData" {
     It "retorna os itens ordenados por quantidade (mais negativo primeiro), vindos do Invoke-Sqlcmd" {
         Mock Invoke-Sqlcmd {
             @(
-                [pscustomobject]@{ loja = 7; produto = "Meia Kit 3"; codigo = "11902"; quantidade = -5; data = [datetime]"2026-07-07" }
-                [pscustomobject]@{ loja = 3; produto = "Camiseta P Azul"; codigo = "10234"; quantidade = -2; data = [datetime]"2026-07-07" }
+                [pscustomobject]@{ loja = "LOJA 07"; codigo = "11902"; grade = 6; quantidade = -5; data = [datetime]"2026-07-07" }
+                [pscustomobject]@{ loja = "LOJA 03"; codigo = "10234"; grade = 2; quantidade = -2; data = [datetime]"2026-07-07" }
             )
         }
 
@@ -23,9 +23,13 @@ Describe "Get-NegativosData" {
         $result = Get-NegativosData -Server "192.168.0.55" -Database "Dorinhos_2022" -Credential $cred
 
         $result.Count | Should -Be 2
-        $result[0].produto | Should -Be "Meia Kit 3"
+        $result[0].codigo | Should -Be "11902"
         Should -Invoke Invoke-Sqlcmd -Times 1 -ParameterFilter {
-            $ServerInstance -eq "192.168.0.55" -and $Database -eq "Dorinhos_2022" -and $Query -match "ORDER BY quantidade ASC"
+            $ServerInstance -eq "192.168.0.55" -and $Database -eq "Dorinhos_2022" `
+                -and $Query -match "DANIELLA_J.estoque_negativos" `
+                -and $Query -match "es1 < 0" -and $Query -match "es10 < 0" `
+                -and $Query -match "data_geracao = \(SELECT MAX\(data_geracao\)" `
+                -and $Query -match "ORDER BY quantidade ASC"
         }
     }
 }
@@ -34,7 +38,7 @@ Describe "Save-NegativosEstado / Get-NegativosEstado" {
     It "salva e recupera itens e timestamp em round-trip" {
         $path = Join-Path $TestDrive "estado.json"
         $itens = @(
-            [pscustomobject]@{ loja = 3; produto = "Camiseta P Azul"; codigo = "10234"; quantidade = -2; data = [datetime]"2026-07-07" }
+            [pscustomobject]@{ loja = "LOJA 03"; codigo = "10234"; grade = 2; quantidade = -2; data = [datetime]"2026-07-07" }
         )
         $geradoEm = [datetime]"2026-07-08T11:05:00"
 
@@ -42,7 +46,7 @@ Describe "Save-NegativosEstado / Get-NegativosEstado" {
         $estado = Get-NegativosEstado -Path $path
 
         $estado.Items.Count | Should -Be 1
-        $estado.Items[0].produto | Should -Be "Camiseta P Azul"
+        $estado.Items[0].codigo | Should -Be "10234"
         [datetime]$estado.GeradoEm | Should -Be $geradoEm
     }
 
@@ -55,18 +59,19 @@ Describe "Save-NegativosEstado / Get-NegativosEstado" {
 Describe "New-PainelHtml" {
     BeforeAll {
         $itensExemplo = @(
-            [pscustomobject]@{ loja = 7; produto = "Meia Kit 3"; codigo = "11902"; quantidade = -5; data = [datetime]"2026-07-07" }
-            [pscustomobject]@{ loja = 3; produto = "Camiseta P Azul"; codigo = "10234"; quantidade = -2; data = [datetime]"2026-07-07" }
+            [pscustomobject]@{ loja = "LOJA 07 - CENTRO   "; codigo = "11902   "; grade = 6; quantidade = -5; data = [datetime]"2026-07-07" }
+            [pscustomobject]@{ loja = "LOJA 03 - SUL      "; codigo = "10234   "; grade = 2; quantidade = -2; data = [datetime]"2026-07-07" }
         )
     }
 
-    It "inclui total de itens, total de lojas distintas e cada produto na tabela" {
+    It "inclui total de itens, total de lojas distintas, codigo e grade na tabela, sem espacos sobrando" {
         $html = New-PainelHtml -Items $itensExemplo -GeradoEm ([datetime]"2026-07-08T11:05:00") -Desatualizado $false
 
         $html | Should -Match "Total de itens.*2"
         $html | Should -Match "Lojas afetadas.*2"
-        $html | Should -Match "Meia Kit 3"
-        $html | Should -Match "Camiseta P Azul"
+        $html | Should -Match "<td>11902</td>"
+        $html | Should -Match "<td>10234</td>"
+        $html | Should -Match "<td>6</td>"
         $html | Should -Not -Match "dados desatualizados"
     }
 

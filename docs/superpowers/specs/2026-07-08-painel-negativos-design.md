@@ -119,6 +119,15 @@ ORDER BY quantidade ASC
 
 ## Itens Pendentes (antes da implementação)
 
-- [ ] Confirmar nomes exatos das colunas de `estoque_negativos` contra o schema real
-- [ ] Decidir se o Python http.server roda manualmente, como serviço via NSSM, ou inicia junto com o Task Scheduler
+- [x] Confirmar nomes exatos das colunas de `estoque_negativos` contra o schema real — resolvido, ver detalhes no plano (`docs/superpowers/plans/2026-07-08-painel-negativos.md`, seção "Descobertas durante a implementação")
+- [x] Decidir se o Python http.server roda manualmente, como serviço via NSSM, ou inicia junto com o Task Scheduler — resolvido: Scheduled Task com trigger `AtLogOn`
 - [ ] Confirmar IP atual da máquina da Daniella para divulgar a URL de acesso
+
+## Correções pós-descoberta do schema real (2026-07-08)
+
+O schema real de `DANIELLA_J.estoque_negativos` é bem diferente do assumido inicialmente:
+- Não existe uma coluna única de "quantidade negativa": o estoque por grade/tamanho fica em `es1`..`es10`, e a coluna `estoque` (total) é sempre positiva. O painel mostra uma linha por (loja, código, grade) sempre que `esN < 0`.
+- A tabela acumula ~20 gerações semanais sem limpar as antigas — é necessário filtrar pela `data_geracao` mais recente.
+- Colunas de texto (`filial`, `produto`) vêm com espaços à direita e precisam de trim.
+
+Detalhes completos da query final e das correções de encoding/SSL estão no plano de implementação.

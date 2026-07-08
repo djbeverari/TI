@@ -1,4 +1,4 @@
-Add-Type -AssemblyName System.Web
+﻿Add-Type -AssemblyName System.Web
 
 function Get-NegativosData {
     param(
@@ -7,9 +7,13 @@ function Get-NegativosData {
         [Parameter(Mandatory)] [pscredential]$Credential
     )
 
-    $query = "SELECT loja, produto, codigo, quantidade, data FROM estoque_negativos ORDER BY quantidade ASC"
+    $grades = 1..10
+    $selects = $grades | ForEach-Object {
+        "SELECT filial AS loja, produto AS codigo, $_ AS grade, es$_ AS quantidade, data_geracao AS data FROM DANIELLA_J.estoque_negativos WHERE es$_ < 0 AND data_geracao = (SELECT MAX(data_geracao) FROM DANIELLA_J.estoque_negativos)"
+    }
+    $query = ($selects -join "`nUNION ALL`n") + "`nORDER BY quantidade ASC"
 
-    Invoke-Sqlcmd -ServerInstance $Server -Database $Database -Credential $Credential -Query $query -ErrorAction Stop
+    Invoke-Sqlcmd -ServerInstance $Server -Database $Database -Credential $Credential -Query $query -TrustServerCertificate -ErrorAction Stop
 }
 
 function Save-NegativosEstado {
@@ -50,18 +54,28 @@ function New-PainelHtml {
         [bool]$Desatualizado = $false
     )
 
-    $totalItens = $Items.Count
-    $lojasAfetadas = ($Items | Select-Object -ExpandProperty loja -Unique).Count
+    $itensLimpos = $Items | ForEach-Object {
+        [pscustomobject]@{
+            loja       = ([string]$_.loja).Trim()
+            codigo     = ([string]$_.codigo).Trim()
+            grade      = $_.grade
+            quantidade = $_.quantidade
+            data       = $_.data
+        }
+    }
+
+    $totalItens = $itensLimpos.Count
+    $lojasAfetadas = ($itensLimpos | Select-Object -ExpandProperty loja -Unique).Count
 
     $avisoHtml = ""
     if ($Desatualizado) {
         $avisoHtml = "<div class='aviso'>&#9888; dados desatualizados desde $($GeradoEm.ToString('dd/MM/yyyy HH:mm'))</div>"
     }
 
-    $linhas = $Items | ForEach-Object {
+    $linhas = $itensLimpos | ForEach-Object {
         $dataStr = ([datetime]$_.data).ToString("dd/MM/yyyy")
-        "<tr data-loja='$($_.loja)' data-produto='$([System.Web.HttpUtility]::HtmlEncode($_.produto).ToLower())'>" +
-        "<td>$($_.loja)</td><td>$($_.produto)</td><td>$($_.codigo)</td>" +
+        "<tr data-loja='$([System.Web.HttpUtility]::HtmlEncode($_.loja).ToLower())' data-codigo='$([System.Web.HttpUtility]::HtmlEncode($_.codigo).ToLower())'>" +
+        "<td>$($_.loja)</td><td>$($_.codigo)</td><td>$($_.grade)</td>" +
         "<td class='qtd'>$($_.quantidade)</td><td>$dataStr</td></tr>"
     }
     $linhasHtml = ($linhas -join "`n")
@@ -92,9 +106,9 @@ $avisoHtml
 <div>Total de itens: <b>$totalItens</b></div>
 <div>Lojas afetadas: <b>$lojasAfetadas</b></div>
 </div>
-<input id="busca" type="text" placeholder="Filtrar por loja ou produto...">
+<input id="busca" type="text" placeholder="Filtrar por loja ou código do produto...">
 <table id="tabela">
-<thead><tr><th>Loja</th><th>Produto</th><th>Código</th><th>Quantidade</th><th>Data</th></tr></thead>
+<thead><tr><th>Loja</th><th>Código</th><th>Grade</th><th>Quantidade</th><th>Data</th></tr></thead>
 <tbody>
 $linhasHtml
 </tbody>
@@ -104,8 +118,8 @@ document.getElementById('busca').addEventListener('input', function (e) {
   var termo = e.target.value.toLowerCase();
   document.querySelectorAll('#tabela tbody tr').forEach(function (tr) {
     var loja = tr.getAttribute('data-loja');
-    var produto = tr.getAttribute('data-produto');
-    tr.style.display = (loja.indexOf(termo) !== -1 || produto.indexOf(termo) !== -1) ? '' : 'none';
+    var codigo = tr.getAttribute('data-codigo');
+    tr.style.display = (loja.indexOf(termo) !== -1 || codigo.indexOf(termo) !== -1) ? '' : 'none';
   });
 });
 </script>

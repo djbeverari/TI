@@ -575,4 +575,19 @@ Expected: colunas retornadas batem com `loja, produto, codigo, quantidade, data`
 
 Run: `Get-Content "C:\Logs\PainelNegativos\painel_$(Get-Date -Format 'yyyy-MM-dd').log"`
 Expected: linha `OK - N itens negativos, M lojas afetadas` sem erro
+
+---
+
+## Descobertas durante a implementação (schema real, 2026-07-08)
+
+O schema assumido no plano original (`loja, produto, codigo, quantidade, data`) não batia com a tabela real. Ajustes feitos em `negativos-lib.ps1` a partir da consulta real:
+
+- **Schema/tabela real:** `DANIELLA_J.estoque_negativos` (não `dbo.estoque_negativos`)
+- **Colunas reais:** `filial` (texto, ex. `"LOJA 23 - SHOP ITAQUERA"`, largura fixa com espaços à direita), `produto` (código, também com espaços à direita), `estoque` (total, sempre positivo — **não é** a quantidade negativa), `es1`..`es10` (estoque por grade/tamanho, é aqui que aparecem os negativos), `data_geracao` (datetime)
+- **"Qualquer grade negativa"**: o painel mostra uma linha por (loja, código, grade) onde a grade correspondente (`es1`..`es10`) é negativa — não existe uma única coluna "quantidade negativa" pronta. A query em `Get-NegativosData` faz `UNION ALL` das 10 grades, cada uma com `WHERE esN < 0`.
+- **Tabela acumula histórico semanal**: `estoque_negativos` guarda ~20 gerações semanais (fev-jul/2026) sem limpar as antigas. A query filtra `data_geracao = (SELECT MAX(data_geracao) FROM ...)` para pegar só a geração mais recente — sem esse filtro, o painel mistura meses de dados desatualizados.
+- **Coluna Grade adicionada** à tabela do painel (Loja, Código, Grade, Quantidade, Data) já que um mesmo código pode aparecer negativo em mais de uma grade.
+- **Trim nos campos de texto**: `filial`/`produto` vêm com espaços à direita (varchar de largura fixa) — `New-PainelHtml` corta antes de exibir e usar no filtro de busca.
+- **SSL:** o módulo `SqlServer` mais novo (22.x) usa `Encrypt=Mandatory` por padrão; o servidor da retaguarda tem certificado autoassinado, então `Invoke-Sqlcmd` precisa de `-TrustServerCertificate`.
+- **Encoding:** `negativos-lib.ps1` precisa ser salvo com **BOM UTF-8** — sem BOM, o PowerShell 5.1 lê os acentos (`Código`, etc.) errado ao fazer dot-source do arquivo, gerando caracteres corrompidos no HTML gerado.
 ```
