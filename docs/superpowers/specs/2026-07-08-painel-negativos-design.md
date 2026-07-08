@@ -18,7 +18,7 @@ Script PowerShell agendado via Task Scheduler que:
 1. Roda de segunda a sexta, logo após 11:00
 2. Conecta direto na retaguarda (SQL Server) a partir da máquina da Daniella
 3. Consulta a tabela `estoque_negativos` (já vem filtrada, só itens negativos)
-4. Gera um painel HTML acessível via `http://<ip-da-maquina-da-daniella>:8081`
+4. Gera um painel HTML acessível via `http://<ip-da-maquina-da-daniella>:8082`
 
 ---
 
@@ -32,9 +32,9 @@ Script PowerShell agendado via Task Scheduler que:
                                         ├── Gera negativos.html
                                         └── Se falhar: mantém o último HTML gerado + aviso "dados desatualizados"
                                                     │
-                                       [Python http.server — porta 8081, na máquina da Daniella]
+                                       [Python http.server — porta 8082, na máquina da Daniella]
                                                     │
-                                       http://<ip-daniella>:8081
+                                       http://<ip-daniella>:8082
 ```
 
 Diferente do verificador de tickets, não há necessidade de conectar em cada uma das 39 lojas nem de checar status de sync — a tabela já é consolidada e filtrada na retaguarda.
@@ -47,7 +47,7 @@ Diferente do verificador de tickets, não há necessidade de conectar em cada um
 |---|---|---|
 | `gera-painel-negativos.ps1` | máquina da Daniella | Script principal |
 | `negativos.html` | pasta servida pelo http.server | Painel HTML gerado |
-| Serviço web | `<ip-daniella>:8081` | Python http.server (instância separada da do verificador de tickets) |
+| Serviço web | `<ip-daniella>:8082` | Python http.server (instância separada da do verificador de tickets) |
 
 ---
 
@@ -111,9 +111,9 @@ ORDER BY quantidade ASC
 
 ## Serviço Web
 
-- Python `http.server` servindo a pasta com `negativos.html` na porta `8081`
+- Python `http.server` servindo a pasta com `negativos.html` na porta `8082`
 - Roda na máquina da Daniella (não na 192.168.0.147, que hospeda só o painel de tickets)
-- URL de acesso: `http://<ip-daniella>:8081`
+- URL de acesso: `http://<ip-daniella>:8082`
 
 ---
 

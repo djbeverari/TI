@@ -503,7 +503,7 @@ Criar `painel-negativos/instala-servidor-web.ps1`:
 
 ```powershell
 param(
-    [int]$Porta = 8081
+    [int]$Porta = 8082
 )
 
 $webDir = Join-Path $PSScriptRoot "web"
@@ -530,7 +530,7 @@ Write-Host "Tarefa 'PainelEstoqueNegativosWeb' registrada: inicia http.server na
 
 Run:
 ```powershell
-.\painel-negativos\instala-servidor-web.ps1 -Porta 8081
+.\painel-negativos\instala-servidor-web.ps1 -Porta 8082
 Start-ScheduledTask -TaskName "PainelEstoqueNegativosWeb"
 ```
 Expected: sem erro. `Get-ScheduledTask -TaskName "PainelEstoqueNegativosWeb"` mostra a tarefa `Running`
@@ -543,7 +543,7 @@ Run:
 ```
 Expected: `painel-negativos\web\negativos.html` é gerado com dados reais da retaguarda
 
-Abrir no navegador: `http://localhost:8081` (na própria máquina) e `http://<ip-da-maquina-da-daniella>:8081` (de outra máquina da rede)
+Abrir no navegador: `http://localhost:8082` (na própria máquina) e `http://<ip-da-maquina-da-daniella>:8082` (de outra máquina da rede)
 Expected: painel carrega, mostra total de itens/lojas, tabela ordenada por quantidade (mais negativa primeiro), e o campo de busca filtra por loja/produto em tempo real
 
 - [ ] **Step 4: Commit**
