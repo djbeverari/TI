@@ -1,0 +1,46 @@
+========================================
+AGENDAR DATA SYNC NO SERVIDOR
+========================================
+
+IMPORTANTE: Execute como Administrator no PowerShell do servidor!
+
+1. Acesse o servidor via Radmin
+2. Abra PowerShell como Admin
+3. Copie e cole o comando abaixo:
+
+========================================
+
+$ScriptPath = "C:\Users\Datasync\Desktop\data-sync-automacao.ps1"
+
+# Criar ação (executar o script)
+$Action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`""
+
+# Tarefa 1: 10:30
+$Trigger1 = New-ScheduledTaskTrigger -Daily -At "10:30"
+Register-ScheduledTask -TaskName "DataSync_1030" -Action $Action -Trigger $Trigger1 -RunLevel Highest -Force | Out-Null
+
+# Tarefa 2: 14:30
+$Trigger2 = New-ScheduledTaskTrigger -Daily -At "14:30"
+Register-ScheduledTask -TaskName "DataSync_1430" -Action $Action -Trigger $Trigger2 -RunLevel Highest -Force | Out-Null
+
+# Tarefa 3: 16:30
+$Trigger3 = New-ScheduledTaskTrigger -Daily -At "16:30"
+Register-ScheduledTask -TaskName "DataSync_1630" -Action $Action -Trigger $Trigger3 -RunLevel Highest -Force | Out-Null
+
+Write-Host "✅ 3 tarefas criadas no servidor!"
+
+========================================
+
+VERIFICAR SE FUNCIONOU:
+
+Get-ScheduledTask -TaskName DataSync_*
+
+Você deve ver 3 tarefas listadas:
+- DataSync_1030 (10:30)
+- DataSync_1430 (14:30)
+- DataSync_1630 (16:30)
+
+========================================
+
+O sistema vai rodar automaticamente nos 3 horários!
+

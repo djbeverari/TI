@@ -1,0 +1,4 @@
+.email_cred
+*.sql_cred*
+.painel_vendas_cred
+servidor-http-debug.log

@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual Técnico - Data Sync Automação 38 Lojas</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #0066cc;
+            border-bottom: 3px solid #0066cc;
+            padding-bottom: 10px;
+            margin-bottom: 30px;
+        }
+        h2 {
+            color: #0066cc;
+            margin-top: 30px;
+            border-left: 4px solid #0066cc;
+            padding-left: 15px;
+        }
+        h3 {
+            color: #333;
+            margin-top: 20px;
+        }
+        .emoji {
+            margin-right: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th {
+            background-color: #0066cc;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+        }
+        td {
+            border: 1px solid #ddd;
+            padding: 12px;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        pre {
+            background-color: #f4f4f4;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .warning {
+            color: #ff6b6b;
+            font-weight: bold;
+        }
+        .info-box {
+            background-color: #e8f4f8;
+            border-left: 4px solid #0066cc;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .error-box {
+            background-color: #ffe8e8;
+            border-left: 4px solid #ff6b6b;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .toc {
+            background-color: #f0f7ff;
+            padding: 20px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .toc a {
+            display: block;
+            margin: 5px 0;
+            color: #0066cc;
+            text-decoration: none;
+        }
+        .toc a:hover {
+            text-decoration: underline;
+        }
+        footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            color: #666;
+            text-align: center;
+            font-size: 12px;
+        }
+        @media print {
+            body {
+                background-color: white;
+            }
+            .container {
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><span class="emoji">📋</span>Manual Técnico - Data Sync Automação 38 Lojas</h1>
+
+        <div class="toc">
+            <strong>Índice Rápido</strong>
+            <a href="#visao-geral">1. Visão Geral</a>
+            <a href="#arquitetura">2. Arquitetura</a>
+            <a href="#instalacao">3. Instalação e Configuração</a>
+            <a href="#operacao">4. Operação e Monitoramento</a>
+            <a href="#troubleshooting">5. Troubleshooting</a>
+            <a href="#referencia">6. Referência Técnica</a>
+        </div>
+
+        <h2 id="visao-geral"><span class="emoji">🎯</span>Visão Geral</h2>
+
+        <p>O sistema <strong>Data Sync Automação</strong> sincroniza dados de 38 filiais da Dorinhos com o servidor central (192.168.0.147) automaticamente três vezes ao dia:</p>
+
+        <ul>
+            <li><strong>10:30</strong> — Sincronização matinal</li>
+            <li><strong>14:30</strong> — Sincronização vespertina</li>
+            <li><strong>16:30</strong> — Sincronização noturna</li>
+        </ul>
+
+        <h3>O que o sistema faz?</h3>
+        <ol>
+            <li><strong>Recebe dados</strong> de todas as 38 lojas do servidor (RECEBE)</li>
+            <li><strong>Aguarda 10 minutos</strong> para processamento</li>
+            <li><strong>Envia dados</strong> processados de volta para as 38 lojas (ENVIA)</li>
+            <li><strong>Registra tudo</strong> em arquivo de log</li>
+            <li><strong>Notifica erros</strong> por desktop popup e email</li>
+        </ol>
+
+        <h2 id="arquitetura"><span class="emoji">🏗️</span>Arquitetura</h2>
+
+        <h3>Fluxo de Execução</h3>
+        <pre>
+INÍCIO (10:30, 14:30 ou 16:30)
+│
+├─ FASE 1: RECEBE (Todos os lojas em série)
+│  ├─ Loja 03: RECEBE ✓
+│  ├─ Loja 04: RECEBE ✓
+│  ├─ ...
+│  └─ Loja 57: RECEBE ✓
+│
+├─ PAUSA: 10 minutos
+│  └─ Aguardando processamento no servidor
+│
+├─ FASE 2: ENVIA (Todos os lojas em série)
+│  ├─ Loja 03: ENVIA ✓
+│  ├─ Loja 04: ENVIA ✓
+│  ├─ ...
+│  └─ Loja 57: ENVIA ✓
+│
+└─ FIM: Relatório + Notificações (se houver erros)
+        </pre>
+
+        <h3>Componentes do Sistema</h3>
+        <table>
+            <tr>
+                <th>Componente</th>
+                <th>Localização</th>
+                <th>Função</th>
+            </tr>
+            <tr>
+                <td><strong>Script Principal</strong></td>
+                <td><code>C:\Users\Daniella\ti\data-sync-automacao.ps1</code></td>
+                <td>Executa sincronização de dados</td>
+            </tr>
+            <tr>
+                <td><strong>Agendador</strong></td>
+                <td><code>C:\Users\Daniella\ti\agendar-datasync-admin.ps1</code></td>
+                <td>Cria tarefas no Windows Task Scheduler</td>
+            </tr>
+            <tr>
+                <td><strong>Credencial</strong></td>
+                <td><code>C:\Users\Daniella\ti\.email_cred</code></td>
+                <td>Senha criptografada para email</td>
+            </tr>
+            <tr>
+                <td><strong>VBS Remoto</strong></td>
+                <td><code>\\192.168.0.147\Users\Datasync\Desktop\executar_atalho.vbs</code></td>
+                <td>Executa atalhos no servidor</td>
+            </tr>
+            <tr>
+                <td><strong>Logs</strong></td>
+                <td><code>C:\Logs\DataSync\sync_YYYY-MM-DD.log</code></td>
+                <td>Registro detalhado de execução</td>
+            </tr>
+        </table>
+
+        <h2 id="instalacao"><span class="emoji">⚙️</span>Instalação e Configuração</h2>
+
+        <h3>Pré-requisitos</h3>
+        <ul>
+            <li>✅ Windows Server ou Windows 10/11</li>
+            <li>✅ PowerShell 5.0+</li>
+            <li>✅ Acesso de Administrador</li>
+            <li>✅ Conexão de rede para 192.168.0.147</li>
+            <li>✅ Office365/Outlook (para alertas por email)</li>
+        </ul>
+
+        <h3>Etapa 1: Guardar Credencial de Email (UMA VEZ APENAS)</h3>
+
+        <div class="warning">⚠️ Execute como Administrador</div>
+
+        <pre>powershell -NoProfile -ExecutionPolicy Bypass -File 'C:\Users\Daniella\ti\guardar-senha-email.ps1'</pre>
+
+        <p>Será solicitado:</p>
+        <ul>
+            <li><strong>Email</strong>: <code>daniella@dorinhos.com.br</code> (já preenchido)</li>
+            <li><strong>Senha</strong>: Digite a senha do Office365</li>
+        </ul>
+
+        <p class="success">✅ Arquivo criado com sucesso</p>
+
+        <h3>Etapa 2: Agendar Tarefas (UMA VEZ APENAS)</h3>
+
+        <div class="warning">⚠️ Execute como Administrador</div>
+
+        <pre>powershell -NoProfile -ExecutionPolicy Bypass -File 'C:\Users\Daniella\ti\agendar-datasync-admin.ps1'</pre>
+
+        <p>Serão criadas 3 tarefas no Windows Task Scheduler:</p>
+        <ul>
+            <li><code>DataSync_1030</code> → 10:30</li>
+            <li><code>DataSync_1430</code> → 14:30</li>
+            <li><code>DataSync_1630</code> → 16:30</li>
+        </ul>
+
+        <p class="success">✅ Tarefas criadas com sucesso</p>
+
+        <h2 id="operacao"><span class="emoji">📊</span>Operação e Monitoramento</h2>
+
+        <h3>Execução Manual (Teste)</h3>
+
+        <p>Se precisar executar a sincronização manualmente:</p>
+
+        <pre>powershell -NoProfile -ExecutionPolicy Bypass -File 'C:\Users\Daniella\ti\data-sync-automacao.ps1'</pre>
+
+        <p><strong>Duração esperada</strong>: ~11-12 minutos (10 min de pausa + tempo de execução)</p>
+
+        <h3>Consultar Resultados</h3>
+
+        <p>Após cada execução, verifique o log:</p>
+
+        <pre>type C:\Logs\DataSync\sync_$(Get-Date -Format 'yyyy-MM-dd').log</pre>
+
+        <h3>Alertas por Email</h3>
+
+        <div class="info-box">
+            <strong>Quando enviado</strong>: Apenas quando há <strong>falhas</strong> em alguma loja
+        </div>
+
+        <p><strong>Conteúdo do email</strong>:</p>
+        <pre>
+ALERTA DE ERRO - DATA SYNC
+
+Data/Hora: 15/05/2026 14:35:22
+
+RESUMO:
+- Lojas com SUCESSO: 37
+- Lojas com FALHA: 1
+
+LOJAS COM ERRO:
+04
+
+Verifique o log em: C:\Logs\DataSync\sync_2026-05-15.log
+        </pre>
+
+        <h2 id="troubleshooting"><span class="emoji">🔧</span>Troubleshooting</h2>
+
+        <h3>Problema: Script não executa</h3>
+
+        <div class="error-box">
+            <strong>Sintoma</strong>: Tarefa não inicia ou erro de execução
+        </div>
+
+        <p><strong>Solução</strong>:</p>
+        <pre>
+# Verificar se a tarefa está habilitada
+Get-ScheduledTask -TaskName DataSync_1030 | Select-Object State
+
+# Recriar tarefas
+powershell -NoProfile -ExecutionPolicy Bypass -File 'C:\Users\Daniella\ti\agendar-datasync-admin.ps1'
+        </pre>
+
+        <h3>Problema: Email não chega</h3>
+
+        <div class="error-box">
+            <strong>Sintoma</strong>: Falhas ocorrem mas nenhum email é enviado
+        </div>
+
+        <p><strong>Solução</strong>:</p>
+        <pre>
+# Verificar se credencial existe
+Test-Path C:\Users\Daniella\ti\.email_cred
+
+# Se não existir, recrear
+powershell -NoProfile -ExecutionPolicy Bypass -File 'C:\Users\Daniella\ti\guardar-senha-email.ps1'
+
+# Verificar conectividade SMTP
+Test-NetConnection smtp.office365.com -Port 587
+        </pre>
+
+        <h3>Problema: Lojas falhando</h3>
+
+        <div class="error-box">
+            <strong>Sintoma</strong>: Uma ou mais lojas com status ERRO
+        </div>
+
+        <p><strong>Solução</strong>:</p>
+        <ol>
+            <li>Verifique o <strong>log detalhado</strong></li>
+            <li>Erros comuns:
+                <ul>
+                    <li><strong>"Atalho não encontrado"</strong> → Verificar se arquivo .lnk existe no servidor</li>
+                    <li><strong>"Timeout"</strong> → Aumentar timeout em linha 121 do script</li>
+                    <li><strong>"Conexão recusada"</strong> → Verificar conectividade com 192.168.0.147</li>
+                </ul>
+            </li>
+        </ol>
+
+        <h2 id="referencia"><span class="emoji">📚</span>Referência Técnica</h2>
+
+        <h3>Lojas Suportadas (38 lojas)</h3>
+        <p>IDs: 3, 4, 5, 6, 7, 9, 14, 16, 17, 21, 23, 26, 28, 29, 31, 32, 33, 34, 36, 37, 38, 40, 41, 42, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57</p>
+
+        <h3>Variáveis de Configuração</h3>
+        <table>
+            <tr>
+                <th>Variável</th>
+                <th>Valor Padrão</th>
+                <th>Descrição</th>
+            </tr>
+            <tr>
+                <td><code>$ServidorPath</code></td>
+                <td><code>\\192.168.0.147\Users\Datasync\Desktop\DATA SYNC SERVER</code></td>
+                <td>Caminho base no servidor</td>
+            </tr>
+            <tr>
+                <td><code>$SmtpServer</code></td>
+                <td><code>smtp.office365.com</code></td>
+                <td>Servidor de email</td>
+            </tr>
+            <tr>
+                <td><code>$SmtpPort</code></td>
+                <td><code>587</code></td>
+                <td>Porta SMTP</td>
+            </tr>
+            <tr>
+                <td><code>$LogPath</code></td>
+                <td><code>C:\Logs\DataSync</code></td>
+                <td>Pasta de arquivos de log</td>
+            </tr>
+        </table>
+
+        <footer>
+            <p><strong>Data Sync Automação v2.0</strong> — Última atualização: 15 de maio de 2026</p>
+            <p>Status: ✅ Produção | Desenvolvido por: Daniella (TI Dorinhos)</p>
+            <p>Para abrir como PDF: Pressione <strong>Ctrl+P</strong> e escolha "Salvar como PDF"</p>
+        </footer>
+    </div>
+</body>
+</html>

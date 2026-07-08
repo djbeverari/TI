@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Documentação Técnica — Data Sync Automação</title>
+<style>
+  body { font-family: "Segoe UI", sans-serif; max-width: 960px; margin: 40px auto; padding: 0 30px; color: #222; line-height: 1.7; }
+  h1 { color: #003d82; border-bottom: 3px solid #003d82; padding-bottom: 12px; font-size: 2em; }
+  h2 { color: #003d82; margin-top: 40px; font-size: 1.35em; border-left: 4px solid #003d82; padding-left: 12px; }
+  h3 { color: #444; margin-top: 22px; font-size: 1.05em; }
+  code { background: #f0f4f8; padding: 2px 7px; border-radius: 4px; font-family: Consolas, monospace; font-size: 0.93em; color: #c0392b; }
+  pre { background: #f0f4f8; padding: 14px 18px; border-radius: 6px; font-family: Consolas, monospace; font-size: 0.88em; overflow-x: auto; border-left: 4px solid #003d82; }
+  table { border-collapse: collapse; width: 100%; margin: 15px 0; }
+  th { background: #003d82; color: white; padding: 10px 14px; text-align: left; font-size: 0.9em; }
+  td { padding: 9px 14px; border-bottom: 1px solid #e0e0e0; font-size: 0.92em; vertical-align: top; }
+  tr:nth-child(even) { background: #f7f9fc; }
+  .box { padding: 14px 18px; border-radius: 6px; margin: 15px 0; border-left: 4px solid; }
+  .box.info  { background: #e8f4fd; border-color: #2196F3; }
+  .box.ok    { background: #f5fff5; border-color: #4CAF50; }
+  .box.warn  { background: #fff8f0; border-color: #ff9800; }
+  .box.err   { background: #fff5f5; border-color: #f44336; }
+  .step { display: flex; gap: 14px; margin: 12px 0; align-items: flex-start; }
+  .step-num { background: #003d82; color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9em; flex-shrink: 0; margin-top: 2px; }
+  hr { border: none; border-top: 1px solid #e0e0e0; margin: 40px 0; }
+  .file-block { background: #1e1e2e; color: #cdd6f4; padding: 14px 18px; border-radius: 8px; font-family: Consolas, monospace; font-size: 0.88em; margin: 10px 0; }
+  .file-block .path { color: #89dceb; margin-bottom: 8px; font-weight: bold; }
+  @media print { body { margin: 20px; } }
+</style>
+</head>
+<body>
+
+<h1>Documentação Técnica — Data Sync Automação<br>
+<small style="font-size:0.5em; color:#666;">Sistema de sincronização de dados — 38 lojas Dorinhos</small></h1>
+
+<p><strong>Responsável TI:</strong> Daniella &nbsp;|&nbsp; <strong>Email:</strong> daniella@dorinhos.com.br<br>
+<strong>Servidor:</strong> <code>192.168.0.147</code> &nbsp;|&nbsp; <strong>Usuário:</strong> <code>Datasync</code> &nbsp;|&nbsp; <strong>Documento criado:</strong> Maio 2026</p>
+
+<div class="box info">
+  Este documento descreve toda a arquitetura, configuração e funcionamento do sistema de sincronização automática de dados entre as 38 lojas e o servidor central.
+</div>
+
+<hr>
+
+<h2>1. Visão Geral do Sistema</h2>
+
+<p>O sistema sincroniza dados do Linx DataSync (Retail) entre o servidor central e cada uma das 38 lojas, em dois sentidos:</p>
+
+<table>
+  <tr><th>Operação</th><th>Direção</th><th>O que faz</th></tr>
+  <tr><td><strong>RECEBE</strong></td><td>Loja → Servidor</td><td>Coleta dados de vendas, clientes e movimentos de cada loja</td></tr>
+  <tr><td><strong>ENVIA</strong></td><td>Servidor → Loja</td><td>Envia tabelas, produtos, preços e parâmetros atualizados para cada loja</td></tr>
+</table>
+
+<h3>Fluxo de um ciclo completo</h3>
+<div class="step"><div class="step-num">1</div><div><strong>RECEBE</strong> — todas as 38 lojas em lotes de 5 simultâneas (timeout: 2 min por loja)</div></div>
+<div class="step"><div class="step-num">2</div><div><strong>Pausa de 15 minutos</strong> — aguarda o Linx processar os dados recebidos</div></div>
+<div class="step"><div class="step-num">3</div><div><strong>ENVIA</strong> — apenas as lojas que tiveram RECEBE com sucesso, em lotes de 5 (timeout: 8 min por loja). Lojas com RECEBE com falha são ignoradas no ENVIA.</div></div>
+
+<div class="box warn">
+  <strong>Por que ignorar o ENVIA quando o RECEBE falha?</strong><br>
+  Se a loja não conseguiu enviar dados (RECEBE), é porque está sem conexão ou desligada. Não adianta tentar enviar dados para ela.
+</div>
+
+<hr>
+
+<h2>2. Infraestrutura</h2>
+
+<table>
+  <tr><th>Item</th><th>Valor</th></tr>
+  <tr><td>IP do servidor</td><td><code>192.168.0.147</code></td></tr>
+  <tr><td>Usuário Windows</td><td><code>Datasync</code></td></tr>
+  <tr><td>Senha</td><td><code>suporte2003</code></td></tr>
+  <tr><td>Software de sync</td><td>Linx DataSync (Retail)</td></tr>
+  <tr><td>Total de lojas</td><td>38 lojas</td></tr>
+  <tr><td>Horários agendados</td><td>10:30, 14:30 e 16:30 (segunda a sexta)</td></tr>
+  <tr><td>Painel web</td><td><code>http://192.168.0.147:8080/painel.html</code></td></tr>
+  <tr><td>Regra de firewall</td><td>DataSync Painel HTTP 8080 — TCP inbound, todos os perfis</td></tr>
+</table>
+
+<h3>Lojas sincronizadas</h3>
+<p>03, 04, 05, 06, 07, 09, 14, 16, 17, 21, 23, 26, 28, 29, 31, 32, 33, 34, 36, 37, 38, 40, 41, 42, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57</p>
+
+<hr>
+
+<h2>3. Arquivos do Sistema</h2>
+
+<div class="file-block">
+  <div class="path">SERVIDOR — C:\Users\Datasync\Desktop\ti\</div>
+  data-sync-automacao.ps1    &larr; script principal de sincronização<br>
+  gerar-painel-datasync.ps1  &larr; gerador do painel HTML em tempo real
+</div>
+
+<div class="file-block">
+  <div class="path">LOCAL (máquina da TI) — C:\Users\Daniella\ti\</div>
+  data-sync-automacao.ps1    &larr; cópia local (fonte para deploy)<br>
+  gerar-painel-datasync.ps1  &larr; cópia local (fonte para deploy)<br>
+  manual-painel.html         &larr; manual para operadores e supervisores<br>
+  documentacao-tecnica.html  &larr; este documento
+</div>
+
+<div class="file-block">
+  <div class="path">SERVIDOR — Logs e dados gerados automaticamente</div>
+  C:\Logs\DataSync\sync_YYYY-MM-DD.log  &larr; log diário de cada ciclo<br>
+  C:\Logs\DataSync\status\loja_XX.txt  &larr; status em tempo real por loja<br>
+  C:\Logs\DataSync\painel.html         &larr; painel gerado (servido via HTTP)<br>
+  C:\Program Files (x86)\Linx Sistemas\Linx Datasync (Retail)\Log\  &larr; logs do Linx
+</div>
+
+<div class="file-block">
+  <div class="path">SERVIDOR — Atalhos do Linx DataSync (não modificar)</div>
+  C:\Users\Datasync\Desktop\DATA SYNC SERVER\RECEBE\RECEBE LOJA XX*.lnk<br>
+  C:\Users\Datasync\Desktop\DATA SYNC SERVER\ENVIA\ENVIA LOJA XX*.lnk
+</div>
+
+<hr>
+
+<h2>4. Tarefas Agendadas (Task Scheduler)</h2>
+
+<table>
+  <tr><th>Tarefa</th><th>Horário</th><th>O que faz</th></tr>
+  <tr><td><code>DataSync_1030</code></td><td>10:30 seg–sex</td><td>Executa data-sync-automacao.ps1 (ciclo principal)</td></tr>
+  <tr><td><code>DataSync_1430</code></td><td>14:30 seg–sex</td><td>Executa data-sync-automacao.ps1 (ciclo intermediário)</td></tr>
+  <tr><td><code>DataSync_1630</code></td><td>16:30 seg–sex</td><td>Executa data-sync-automacao.ps1 (último ciclo)</td></tr>
+  <tr><td><code>DataSyncPainel</code></td><td>Na inicialização</td><td>Executa gerar-painel-datasync.ps1 em loop contínuo</td></tr>
+  <tr><td><code>DataSyncHTTP</code></td><td>Na inicialização</td><td>Servidor HTTP Python na porta 8080 (serve o painel.html)</td></tr>
+</table>
+
+<div class="box warn">
+  <strong>Importante:</strong> o script <code>gerar-painel-datasync.ps1</code> roda em loop <code>while($true)</code> e carrega o arquivo apenas uma vez ao iniciar. Para que mudanças no arquivo surtam efeito, é preciso reiniciar a tarefa <code>DataSyncPainel</code>.
+</div>
+
+<hr>
+
+<h2>5. Como Fazer Deploy de Alterações</h2>
+
+<p>Edite os arquivos locais em <code>C:\Users\Daniella\ti\</code> e execute no PowerShell local:</p>
+
+<pre>$cred = New-Object System.Management.Automation.PSCredential('Datasync',
+    (ConvertTo-SecureString 'suporte2003' -AsPlainText -Force))
+$s = New-PSSession -ComputerName 192.168.0.147 -Credential $cred
+
+# Enviar script principal
+$txt = [System.IO.File]::ReadAllText("C:\Users\Daniella\ti\data-sync-automacao.ps1",
+    [System.Text.Encoding]::UTF8)
+Invoke-Command -Session $s -ScriptBlock {
+    param($t)
+    [System.IO.File]::WriteAllText(
+        "C:\Users\Datasync\Desktop\ti\data-sync-automacao.ps1", $t,
+        [System.Text.Encoding]::UTF8)
+} -ArgumentList $txt
+
+# Enviar e reiniciar painel
+$txt2 = [System.IO.File]::ReadAllText("C:\Users\Daniella\ti\gerar-painel-datasync.ps1",
+    [System.Text.Encoding]::UTF8)
+Invoke-Command -Session $s -ScriptBlock {
+    param($t)
+    [System.IO.File]::WriteAllText(
+        "C:\Users\Datasync\Desktop\ti\gerar-painel-datasync.ps1", $t,
+        [System.Text.Encoding]::UTF8)
+    Stop-ScheduledTask -TaskName "DataSyncPainel"
+    Start-Sleep -Seconds 2
+    Start-ScheduledTask -TaskName "DataSyncPainel"
+} -ArgumentList $txt2
+
+Remove-PSSession $s</pre>
+
+<div class="box info">
+  Sempre verifique a sintaxe antes de fazer deploy:<br>
+  <code>$erros = $null; [System.Management.Automation.Language.Parser]::ParseFile("caminho.ps1", [ref]$null, [ref]$erros); $erros</code>
+</div>
+
+<hr>
+
+<h2>6. Configurações Atuais do Script Principal</h2>
+
+<table>
+  <tr><th>Parâmetro</th><th>Valor</th><th>O que é</th></tr>
+  <tr><td><code>$loteTamanho</code></td><td>5</td><td>Lojas processadas em paralelo por vez</td></tr>
+  <tr><td>Timeout RECEBE</td><td>2 minutos (120.000ms)</td><td>Tempo máximo para operação de recebimento por loja</td></tr>
+  <tr><td>Timeout ENVIA</td><td>8 minutos (480.000ms)</td><td>Tempo máximo para operação de envio por loja</td></tr>
+  <tr><td>Pausa entre fases</td><td>15 minutos (900s)</td><td>Aguarda o Linx processar antes do ENVIA</td></tr>
+</table>
+
+<div class="box info">
+  <strong>Por que lotes de 5?</strong> Rodar todas as 38 lojas ao mesmo tempo sobrecarrega o Linx DataSync e causa falhas em cascata. Lotes de 5 equilibram velocidade e estabilidade do sistema.
+</div>
+
+<div class="box info">
+  <strong>Por que timeout de 8 min no ENVIA?</strong> Lojas de shopping têm alto volume de dados (2.000–3.000+ registros de clientes, entradas, NFC-e). Com 3 minutos, o processo era morto no meio da transferência.
+</div>
+
+<h3>Detecção de sucesso</h3>
+<p>Após cada operação, o script lê a última linha do log gerado pelo Linx DataSync. Sucesso é confirmado quando a linha contém:</p>
+<pre>transferência foi concluída com sucesso</pre>
+
+<h3>Arquivos de status em tempo real</h3>
+<p>Cada job paralelo escreve seu estado em <code>C:\Logs\DataSync\status\loja_XX.txt</code>:</p>
+<pre>TIPO|STATUS|HH:MM:SS
+
+Exemplos:
+RECEBE|RODANDO|10:31:05
+RECEBE|OK|10:32:18
+ENVIA|IGNORADO|10:45:00
+ENVIA|ERRO|10:53:12</pre>
+
+<hr>
+
+<h2>7. Controles Manuais via PowerShell Remoto</h2>
+
+<table>
+  <tr><th>Ação</th><th>Comando</th></tr>
+  <tr><td>Iniciar sync agora</td><td><code>Start-ScheduledTask -TaskName "DataSync_1030"</code></td></tr>
+  <tr><td>Parar sync em andamento</td><td><code>Stop-ScheduledTask -TaskName "DataSync_1030"</code></td></tr>
+  <tr><td>Reiniciar painel</td><td><code>Stop-ScheduledTask "DataSyncPainel"; Start-Sleep 2; Start-ScheduledTask "DataSyncPainel"</code></td></tr>
+  <tr><td>Ver estado das tasks</td><td><code>Get-ScheduledTask | Where TaskName -like "DataSync*" | Select TaskName, State</code></td></tr>
+  <tr><td>Limpar status do ciclo</td><td><code>Remove-Item "C:\Logs\DataSync\status\*.txt" -Force</code></td></tr>
+  <tr><td>Ver log de hoje (últimas 30 linhas)</td><td><code>Get-Content "C:\Logs\DataSync\sync_$(Get-Date -Format 'yyyy-MM-dd').log" -Tail 30</code></td></tr>
+</table>
+
+<h3>Abrir sessão remota no servidor</h3>
+<pre>$cred = New-Object System.Management.Automation.PSCredential('Datasync',
+    (ConvertTo-SecureString 'suporte2003' -AsPlainText -Force))
+$s = New-PSSession -ComputerName 192.168.0.147 -Credential $cred
+Invoke-Command -Session $s -ScriptBlock { # seus comandos aqui }
+Remove-PSSession $s</pre>
+
+<hr>
+
+<h2>8. Interpretando Falhas</h2>
+
+<table>
+  <tr><th>Mensagem no log</th><th>Causa provável</th><th>O que fazer</th></tr>
+  <tr><td><code>TIMEOUT apos X minutos</code></td><td>Loja demorou mais que o timeout (dados volumosos ou conexão lenta)</td><td>Verificar no ciclo seguinte; se persistir, aumentar timeout no script</td></tr>
+  <tr><td><code>Log do Linx nao gerado</code></td><td>Linx não iniciou a transferência — loja offline ou atalho inválido</td><td>Verificar conectividade da loja e o arquivo .lnk</td></tr>
+  <tr><td><code>Falha de conexao (log vazio)</code></td><td>Linx iniciou mas não conectou à loja</td><td>Verificar rede e DataSync client na loja</td></tr>
+  <tr><td><code>Atalho sem programa destino</code></td><td>Arquivo .lnk corrompido ou caminho inválido</td><td>Recriar o atalho DataSync para essa loja</td></tr>
+  <tr><td><code>ENVIA ignorado (RECEBE falhou)</code></td><td>Normal — loja não estava acessível no RECEBE</td><td>Investigar causa da falha no RECEBE</td></tr>
+</table>
+
+<h3>Ver log do Linx de uma loja específica</h3>
+<pre>$logLinxPath = "C:\Program Files (x86)\Linx Sistemas\Linx Datasync (Retail)\Log"
+$hoje = Get-Date -Format "yyyyMMdd"
+$loja = "05"  # altere o número
+
+Get-ChildItem $logLinxPath |
+    Where-Object { $_.Name -like "*$hoje*" -and $_.Name -like "*LOJA $loja *" } |
+    Sort-Object LastWriteTime -Descending |
+    Select-Object -First 1 |
+    ForEach-Object { Get-Content $_.FullName -Encoding Default -Tail 10 }</pre>
+
+<hr>
+
+<h2>9. Painel de Monitoramento</h2>
+
+<table>
+  <tr><th>Item</th><th>Detalhe</th></tr>
+  <tr><td>URL</td><td><code>http://192.168.0.147:8080/painel.html</code></td></tr>
+  <tr><td>Atualização</td><td>Automática a cada 30 segundos</td></tr>
+  <tr><td>Card Última Sincronização</td><td>Hora, data e status (SUCESSO / PARCIAL / FALHA / Desconhecido)</td></tr>
+  <tr><td>Card Lojas com Sucesso</td><td>Quantidade + data e hora da última sincronização</td></tr>
+  <tr><td>Card Lojas com Falha</td><td>Quantidade + data e hora da última sincronização</td></tr>
+  <tr><td>Grid de progresso</td><td>38 lojas em tempo real: azul piscando (rodando), verde claro (RECEBE OK), verde (ENVIA OK), vermelho (ERRO), cinza (IGNORADO)</td></tr>
+  <tr><td>Seção de falhas</td><td>Lista lojas com problema com badges RECEBE / ENVIA</td></tr>
+</table>
+
+<div class="box info">
+  <strong>"Desconhecido" na Última Sincronização:</strong> aparece quando o ciclo ainda está em andamento (o RESUMO ainda não foi gravado no log) ou quando nenhum ciclo rodou hoje.
+</div>
+
+<hr>
+
+<h2>10. Decisões Técnicas Relevantes</h2>
+
+<table>
+  <tr><th>Decisão</th><th>Motivo</th></tr>
+  <tr><td>Lotes de 5 em paralelo</td><td>38 simultâneas sobrecarrega o Linx e causa falhas em cascata. 5 é o equilíbrio entre velocidade e estabilidade.</td></tr>
+  <tr><td>RECEBE → pausa → ENVIA só das OK</td><td>Loja sem RECEBE está offline. A pausa garante que o Linx processe os dados antes do envio.</td></tr>
+  <tr><td>Timeout ENVIA de 8 minutos</td><td>Lojas de shopping têm 2.000–3.000+ registros. Com 3 min o processo era morto no meio da transferência.</td></tr>
+  <tr><td>Arquivo de status por loja</td><td>Jobs paralelos têm escopo isolado. Arquivo é a única forma de comunicar status em tempo real ao painel.</td></tr>
+  <tr><td>Deploy via <code>[System.IO.File]::WriteAllText</code></td><td>Garante UTF-8 sem BOM. PSSession com Set-Content pode gerar encoding incorreto.</td></tr>
+  <tr><td>Regra de firewall porta 8080</td><td>Sem a regra inbound, o painel não abre em outros computadores da rede, mesmo com o servidor HTTP rodando.</td></tr>
+</table>
+
+<hr>
+<p style="text-align:center; color:#aaa; font-size:0.85em;">TI Dorinhos &mdash; Documentação Técnica Data Sync &mdash; Maio 2026</p>
+
+</body>
+</html>
