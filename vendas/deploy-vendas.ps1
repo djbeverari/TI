@@ -10,11 +10,15 @@ Write-Host ""
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
-$credServidor = Get-Credential -UserName "Datasync" -Message "Senha do usuario Datasync no servidor 192.168.0.147"
-if (-not $credServidor) { Write-Host "Cancelado." -ForegroundColor Red; pause; exit 1 }
+Write-Host "Usuario Datasync no servidor 192.168.0.147:" -ForegroundColor Yellow
+$senhaServidor = Read-Host "Senha do usuario Datasync" -AsSecureString
+$credServidor = New-Object System.Management.Automation.PSCredential("Datasync", $senhaServidor)
 
-$credRetaguarda = Get-Credential -Message "Usuario e senha SQL da retaguarda (Dorinhos_2022 @ 192.168.0.55) - sera salva no servidor"
-if (-not $credRetaguarda) { Write-Host "Cancelado." -ForegroundColor Red; pause; exit 1 }
+Write-Host ""
+Write-Host "Credencial SQL da retaguarda (Dorinhos_2022 @ 192.168.0.55) - sera salva no servidor:" -ForegroundColor Yellow
+$usuarioRetaguarda = Read-Host "Usuario SQL (ex: sa)"
+$senhaRetaguarda = Read-Host "Senha SQL da retaguarda" -AsSecureString
+$credRetaguarda = New-Object System.Management.Automation.PSCredential($usuarioRetaguarda, $senhaRetaguarda)
 
 Write-Host "Conectando ao servidor..." -ForegroundColor Cyan
 $session = New-PSSession -ComputerName 192.168.0.147 -Credential $credServidor -ErrorAction Stop

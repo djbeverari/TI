@@ -7,8 +7,9 @@ Write-Host " DIAGNOSTICO - Painel de Vendas no servidor" -ForegroundColor Cyan
 Write-Host "================================================" -ForegroundColor Cyan
 Write-Host ""
 
-$credServidor = Get-Credential -UserName "Datasync" -Message "Senha do usuario Datasync no servidor 192.168.0.147"
-if (-not $credServidor) { Write-Host "Cancelado." -ForegroundColor Red; pause; exit 1 }
+Write-Host "Usuario Datasync no servidor 192.168.0.147:" -ForegroundColor Yellow
+$senhaServidor = Read-Host "Senha do usuario Datasync" -AsSecureString
+$credServidor = New-Object System.Management.Automation.PSCredential("Datasync", $senhaServidor)
 
 $session = New-PSSession -ComputerName 192.168.0.147 -Credential $credServidor -ErrorAction Stop
 
