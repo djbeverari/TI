@@ -169,7 +169,7 @@ $barrasProdutosHtml
 </div>
 <input id="busca" type="text" placeholder="Filtrar por loja ou código do produto...">
 <table id="tabela">
-<thead><tr><th>Loja</th><th>Código</th><th>Grade</th><th>Quantidade</th><th>Data</th></tr></thead>
+<thead><tr><th>Loja</th><th>Código</th><th title="Posição na grade de tamanhos do produto (não é o tamanho literal)">Grade (posição)</th><th>Quantidade</th><th>Data</th></tr></thead>
 <tbody>
 $linhasHtml
 </tbody>
