@@ -261,7 +261,7 @@ Adicionar a `painel-negativos/negativos-lib.ps1`:
 ```powershell
 function New-PainelHtml {
     param(
-        [Parameter(Mandatory)] [array]$Items,
+        [array]$Items = @(),
         [Parameter(Mandatory)] [datetime]$GeradoEm,
         [bool]$Desatualizado = $false
     )

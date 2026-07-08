@@ -51,3 +51,34 @@ Describe "Save-NegativosEstado / Get-NegativosEstado" {
         Get-NegativosEstado -Path $path | Should -BeNullOrEmpty
     }
 }
+
+Describe "New-PainelHtml" {
+    BeforeAll {
+        $itensExemplo = @(
+            [pscustomobject]@{ loja = 7; produto = "Meia Kit 3"; codigo = "11902"; quantidade = -5; data = [datetime]"2026-07-07" }
+            [pscustomobject]@{ loja = 3; produto = "Camiseta P Azul"; codigo = "10234"; quantidade = -2; data = [datetime]"2026-07-07" }
+        )
+    }
+
+    It "inclui total de itens, total de lojas distintas e cada produto na tabela" {
+        $html = New-PainelHtml -Items $itensExemplo -GeradoEm ([datetime]"2026-07-08T11:05:00") -Desatualizado $false
+
+        $html | Should -Match "Total de itens.*2"
+        $html | Should -Match "Lojas afetadas.*2"
+        $html | Should -Match "Meia Kit 3"
+        $html | Should -Match "Camiseta P Azul"
+        $html | Should -Not -Match "dados desatualizados"
+    }
+
+    It "mostra o aviso de dados desatualizados quando Desatualizado for verdadeiro" {
+        $html = New-PainelHtml -Items $itensExemplo -GeradoEm ([datetime]"2026-07-08T09:00:00") -Desatualizado $true
+
+        $html | Should -Match "dados desatualizados"
+    }
+
+    It "renderiza painel vazio sem erro quando não há itens" {
+        $html = New-PainelHtml -Items @() -GeradoEm ([datetime]"2026-07-08T11:05:00") -Desatualizado $false
+
+        $html | Should -Match "Total de itens.*0"
+    }
+}
