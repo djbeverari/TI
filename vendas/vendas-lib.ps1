@@ -107,3 +107,34 @@ function Get-VendasPorHora {
         }
     }
 }
+
+function Get-RankingLojas {
+    param(
+        [Parameter(Mandatory)][AllowEmptyCollection()][array]$VendasAtual,
+        [Parameter(Mandatory)][AllowEmptyCollection()][array]$VendasAnterior
+    )
+
+    function Agrupar($vendas) {
+        $porLoja = @{}
+        foreach ($v in $vendas) {
+            $liquido = $v.ValorVendaBruta - $v.ValorCancelado
+            if (-not $porLoja.ContainsKey($v.CodigoFilial)) { $porLoja[$v.CodigoFilial] = 0.0 }
+            $porLoja[$v.CodigoFilial] += $liquido
+        }
+        $porLoja
+    }
+
+    $atualPorLoja    = Agrupar $VendasAtual
+    $anteriorPorLoja = Agrupar $VendasAnterior
+
+    $atualPorLoja.Keys | ForEach-Object {
+        $codigo = $_
+        $faturamentoAtual = $atualPorLoja[$codigo]
+        $faturamentoAnterior = if ($anteriorPorLoja.ContainsKey($codigo)) { $anteriorPorLoja[$codigo] } else { 0.0 }
+        [pscustomobject]@{
+            CodigoFilial       = $codigo
+            Faturamento        = [math]::Round($faturamentoAtual, 2)
+            VariacaoPercentual = Get-VariacaoPercentual -Atual $faturamentoAtual -Anterior $faturamentoAnterior
+        }
+    } | Sort-Object Faturamento -Descending
+}

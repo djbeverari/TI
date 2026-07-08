@@ -109,3 +109,30 @@ Describe 'Get-VendasPorHora' {
         ($porHora | Where-Object Hora -eq 14).Faturamento | Should -Be 30.0
     }
 }
+
+Describe 'Get-RankingLojas' {
+    It 'ordena lojas por faturamento decrescente com variacao vs mes anterior' {
+        $atual = @(
+            [pscustomobject]@{ CodigoFilial = '000012'; ValorVendaBruta = 200.0; ValorCancelado = 0.0 }
+            [pscustomobject]@{ CodigoFilial = '000004'; ValorVendaBruta = 300.0; ValorCancelado = 0.0 }
+        )
+        $anterior = @(
+            [pscustomobject]@{ CodigoFilial = '000012'; ValorVendaBruta = 100.0; ValorCancelado = 0.0 }
+            [pscustomobject]@{ CodigoFilial = '000004'; ValorVendaBruta = 300.0; ValorCancelado = 0.0 }
+        )
+        $ranking = Get-RankingLojas -VendasAtual $atual -VendasAnterior $anterior
+
+        $ranking[0].CodigoFilial | Should -Be '000004'
+        $ranking[0].Faturamento | Should -Be 300.0
+        $ranking[0].VariacaoPercentual | Should -Be 0.0
+        $ranking[1].CodigoFilial | Should -Be '000012'
+        $ranking[1].VariacaoPercentual | Should -Be 100.0
+    }
+
+    It 'inclui loja que so vendeu no mes atual (variacao 100%)' {
+        $atual = @([pscustomobject]@{ CodigoFilial = '000995'; ValorVendaBruta = 50.0; ValorCancelado = 0.0 })
+        $anterior = @()
+        $ranking = Get-RankingLojas -VendasAtual $atual -VendasAnterior $anterior
+        $ranking[0].VariacaoPercentual | Should -Be 100.0
+    }
+}
