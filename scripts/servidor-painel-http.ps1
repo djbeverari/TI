@@ -1,15 +1,85 @@
 ﻿# Servidor HTTP - Painel Data Sync
 # Acessivel em http://192.168.0.147:8080/painel.html de qualquer maquina da rede
 # Execute como Administrador para abrir a porta no firewall
-#
-# Rota especial /executar-verificacao-tickets: dispara a Scheduled Task
-# 'VerificaTickets' sob demanda (botao "Atualizar agora" do tickets.html)
-# e devolve uma pagina de espera que redireciona pro painel.
 
 param(
     [int]$Porta = 8080,
-    [string]$PastaLogs = "C:\Logs\DataSync"
+    [string]$PastaLogs = "C:\Logs\DataSync",
+    [string]$CredencialPainelProtegido = "$PSScriptRoot\.painel_vendas_cred"
 )
+
+# Paineis que exigem usuario/senha (Basic Auth) - guardados via
+# guardar-senha-painel-vendas.ps1. Os demais paineis (painel.html, tickets.html)
+# continuam sem senha.
+$PadroesProtegidos = @('vendas*')
+
+function Set-CabecalhoSemValidacao {
+    # HttpListenerResponse bloqueia Headers.Add/Set(nome, valor) e mesmo
+    # Add("Nome: Valor") para o header WWW-Authenticate ("deve ser
+    # modificado com a propriedade ou metodo adequado"). AddWithoutValidate
+    # (metodo interno do WebHeaderCollection) contorna essa checagem - e o
+    # workaround padrao conhecido para esse problema do .NET.
+    param($Response, [string]$Nome, [string]$Valor)
+    $metodo = $Response.Headers.GetType().GetMethod('AddWithoutValidate', [System.Reflection.BindingFlags]'NonPublic,Instance')
+    $metodo.Invoke($Response.Headers, @($Nome, $Valor))
+}
+
+function Test-CaminhoProtegido {
+    param([string]$UrlPath)
+    foreach ($padrao in $PadroesProtegidos) {
+        if ($UrlPath -like $padrao) { return $true }
+    }
+    return $false
+}
+
+function Test-AutenticacaoBasica {
+    param([string]$AuthorizationHeader)
+    $existeCredencial = Test-Path $CredencialPainelProtegido
+    $temHeader = -not [string]::IsNullOrEmpty($AuthorizationHeader)
+    try {
+        Add-Content -Path "$PSScriptRoot\servidor-http-debug.log" -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') DEBUG: CredencialPainelProtegido='$CredencialPainelProtegido' existe=$existeCredencial temHeaderAuthorization=$temHeader" -Encoding UTF8
+    } catch {}
+    if (-not $existeCredencial) {
+        # Sem credencial guardada: nao bloqueia (evita travar o painel se
+        # ninguem rodou guardar-senha-painel-vendas.ps1 ainda).
+        return $true
+    }
+    if (-not $AuthorizationHeader -or -not $AuthorizationHeader.StartsWith('Basic ')) {
+        return $false
+    }
+    try {
+        $bytesDecodificados = [Convert]::FromBase64String($AuthorizationHeader.Substring(6))
+        $credSalva = Import-Clixml -Path $CredencialPainelProtegido
+        $senhaSalva = $credSalva.GetNetworkCredential().Password
+
+        # Tenta UTF-8 primeiro (RFC 7617, o que pedimos via charset="UTF-8"), e
+        # cai para Latin-1 (ISO-8859-1, padrao antigo) se nao bater - cobre
+        # navegadores/prompts que ainda mandam em Latin-1 quando a senha tem
+        # acento ou caractere especial.
+        foreach ($encoding in @([System.Text.Encoding]::UTF8, [System.Text.Encoding]::GetEncoding('ISO-8859-1'))) {
+            $decodificado = $encoding.GetString($bytesDecodificados)
+            $separador = $decodificado.IndexOf(':')
+            if ($separador -lt 0) { continue }
+            $usuarioEnviado = $decodificado.Substring(0, $separador)
+            $senhaEnviada   = $decodificado.Substring($separador + 1)
+            $usuarioBate = ($usuarioEnviado -eq $credSalva.UserName)
+            $senhaBate   = ($senhaEnviada -eq $senhaSalva)
+            try {
+                Add-Content -Path "$PSScriptRoot\servidor-http-debug.log" -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') DEBUG-AUTH: encoding=$($encoding.EncodingName) tamanhoUsuarioEnviado=$($usuarioEnviado.Length) tamanhoUsuarioSalvo=$($credSalva.UserName.Length) usuarioBate=$usuarioBate tamanhoSenhaEnviada=$($senhaEnviada.Length) tamanhoSenhaSalva=$($senhaSalva.Length) senhaBate=$senhaBate" -Encoding UTF8
+            } catch {}
+            if ($usuarioBate -and $senhaBate) {
+                return $true
+            }
+        }
+        return $false
+    } catch {
+        $erro = $_
+        try {
+            Add-Content -Path "$PSScriptRoot\servidor-http-debug.log" -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') DEBUG-AUTH-EXCECAO: $erro" -Encoding UTF8
+        } catch {}
+        return $false
+    }
+}
 
 # Registrar URL no Windows (requer admin)
 $prefix = "http://+:$Porta/"
@@ -63,6 +133,29 @@ while ($listener.IsListening) {
         $urlPath = $request.Url.LocalPath.TrimStart('/')
         if ([string]::IsNullOrEmpty($urlPath) -or $urlPath -eq '/') {
             $urlPath = 'painel.html'
+        }
+
+        if ((Test-CaminhoProtegido -UrlPath $urlPath) -and -not (Test-AutenticacaoBasica -AuthorizationHeader $request.Headers["Authorization"])) {
+            try {
+                # charset="UTF-8" (RFC 7617) avisa o navegador para codificar
+                # usuario/senha em UTF-8 no popup nativo - sem isso, senhas com
+                # acento/caractere especial sao enviadas em Latin-1 e nunca batem
+                # com a comparacao em UTF-8 abaixo.
+                Set-CabecalhoSemValidacao -Response $response -Nome 'WWW-Authenticate' -Valor 'Basic realm="Painel de Vendas", charset="UTF-8"'
+                $msg = [System.Text.Encoding]::UTF8.GetBytes("<h1>401 - Autenticacao necessaria</h1>")
+                $response.ContentType = "text/html; charset=utf-8"
+                $response.StatusCode = 401
+                $response.ContentLength64 = $msg.Length
+                $response.OutputStream.Write($msg, 0, $msg.Length)
+                Write-Host "$(Get-Date -Format 'HH:mm:ss') GET /$urlPath -> 401 (sem autenticacao)" -ForegroundColor Yellow
+            } catch {
+                $erro = $_
+                Write-Host "Erro ao montar resposta 401: $erro" -ForegroundColor Red
+                try { Add-Content -Path "$PSScriptRoot\servidor-http-erros.log" -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ERRO 401: $erro`n$($erro.ScriptStackTrace)" -Encoding UTF8 } catch {}
+            } finally {
+                $response.Close()
+            }
+            continue
         }
 
         if ($urlPath -eq 'verificacao-timestamp') {
@@ -156,6 +249,9 @@ setTimeout(checar, 5000);
         $response.Close()
     }
     catch {
-        Write-Host "Erro na requisicao: $_" -ForegroundColor Red
+        $erro = $_
+        Write-Host "Erro na requisicao: $erro" -ForegroundColor Red
+        try { Add-Content -Path "$PSScriptRoot\servidor-http-erros.log" -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ERRO: $erro`n$($erro.ScriptStackTrace)" -Encoding UTF8 } catch {}
     }
 }
+
