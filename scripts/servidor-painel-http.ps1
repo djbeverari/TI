@@ -5,13 +5,24 @@
 param(
     [int]$Porta = 8080,
     [string]$PastaLogs = "C:\Logs\DataSync",
-    [string]$CredencialPainelProtegido = "$PSScriptRoot\.painel_vendas_cred"
+    [string]$CredencialPainelProtegido = "$PSScriptRoot\.painel_vendas_cred",
+    [int]$TimeoutInatividadeMinutos = 30
 )
 
 # Paineis que exigem usuario/senha (Basic Auth) - guardados via
 # guardar-senha-painel-vendas.ps1. Os demais paineis (painel.html, tickets.html)
 # continuam sem senha.
 $PadroesProtegidos = @('vendas*')
+
+# Controle de "sessao" para o painel protegido - Basic Auth nao tem logout de
+# verdade (o navegador reenvia a credencial sozinho ate fechar), entao
+# simulamos expirar apos inatividade: se passar do prazo, a proxima
+# tentativa (mesmo com a senha certa em cache) e recusada UMA VEZ - isso faz
+# o navegador reexibir o popup de login - e o prazo reinicia a partir dai.
+# E um "relogio" compartilhado entre todos os acessos ao painel (nao por
+# pessoa/navegador), coerente com ser uma senha unica compartilhada.
+$script:PrazoSessaoVendas = $null
+$script:ForcarNovoLoginVendas = $false
 
 function Set-CabecalhoSemValidacao {
     # HttpListenerResponse bloqueia Headers.Add/Set(nome, valor) e mesmo
@@ -30,6 +41,26 @@ function Test-CaminhoProtegido {
         if ($UrlPath -like $padrao) { return $true }
     }
     return $false
+}
+
+function Test-SessaoValida {
+    # Chamada so quando usuario/senha ja bateram. Decide se a "sessao"
+    # (relogio de inatividade) ainda esta valida, e sempre estende o prazo
+    # em caso de acesso valido (timeout de inatividade, nao de tempo fixo
+    # desde o login).
+    $agora = Get-Date
+    if ($script:PrazoSessaoVendas -and $agora -gt $script:PrazoSessaoVendas) {
+        if (-not $script:ForcarNovoLoginVendas) {
+            # Primeira tentativa apos expirar: recusa uma vez (forca o
+            # navegador a reexibir o popup de login) e zera o prazo.
+            $script:ForcarNovoLoginVendas = $true
+            $script:PrazoSessaoVendas = $null
+            return $false
+        }
+    }
+    $script:ForcarNovoLoginVendas = $false
+    $script:PrazoSessaoVendas = $agora.AddMinutes($TimeoutInatividadeMinutos)
+    return $true
 }
 
 function Test-AutenticacaoBasica {
@@ -68,7 +99,7 @@ function Test-AutenticacaoBasica {
                 Add-Content -Path "$PSScriptRoot\servidor-http-debug.log" -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') DEBUG-AUTH: encoding=$($encoding.EncodingName) tamanhoUsuarioEnviado=$($usuarioEnviado.Length) tamanhoUsuarioSalvo=$($credSalva.UserName.Length) usuarioBate=$usuarioBate tamanhoSenhaEnviada=$($senhaEnviada.Length) tamanhoSenhaSalva=$($senhaSalva.Length) senhaBate=$senhaBate" -Encoding UTF8
             } catch {}
             if ($usuarioBate -and $senhaBate) {
-                return $true
+                return Test-SessaoValida
             }
         }
         return $false
